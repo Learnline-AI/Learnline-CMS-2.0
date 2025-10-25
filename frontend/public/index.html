@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Educational CMS</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    Educational CMS
+                </h1>
+                <div class="header-subtitle">AI-Powered Content Management</div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- Template Editor Section -->
+            <section id="template-editor-section" class="section active">
+                <!-- Component Toolbar -->
+                <div class="component-toolbar">
+                    <div class="toolbar-header">
+                        <h3>Learnline Content Management System</h3>
+                        <p>Drag components to build your educational content</p>
+
+                        <!-- Text Formatting Toolbar -->
+                        <div class="text-formatting-toolbar" id="text-formatting-toolbar">
+                            <div class="toolbar-controls">
+                                <div class="font-size-controls">
+                                    <label for="font-size-selector" class="visually-hidden">Font Size</label>
+                                    <select class="font-size-selector" id="font-size-selector" title="Font Size"
+                                            aria-label="Select font size in pixels">
+                                        <option value="8">8px</option>
+                                        <option value="10">10px</option>
+                                        <option value="12">12px</option>
+                                        <option value="14">14px</option>
+                                        <option value="16" selected>16px</option>
+                                        <option value="18">18px</option>
+                                        <option value="20">20px</option>
+                                        <option value="24">24px</option>
+                                        <option value="28">28px</option>
+                                        <option value="32">32px</option>
+                                    </select>
+                                </div>
+                                <div class="color-picker-controls">
+                                    <label for="component-color-picker" class="visually-hidden">Component Color</label>
+                                    <select class="component-color-picker" id="component-color-picker" title="Component Color"
+                                            aria-label="Select component color">
+                                        <option value="neutral" selected data-color="transparent">🔳 Neutral</option>
+                                        <option value="light-blue" data-color="#E3F2FD">🟦 Light Blue</option>
+                                        <option value="soft-green" data-color="#E8F5E8">🟩 Soft Green</option>
+                                        <option value="pale-yellow" data-color="#FFF8E1">🟨 Pale Yellow</option>
+                                        <option value="light-pink" data-color="#FCE4EC">🟪 Light Pink</option>
+                                        <option value="lavender" data-color="#F3E5F5">🟣 Lavender</option>
+                                    </select>
+                                </div>
+                                <div class="size-buttons">
+                                    <button class="size-btn" id="size-down-btn" title="Decrease Font Size" aria-label="Decrease font size">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <button class="size-btn" id="size-up-btn" title="Increase Font Size" aria-label="Increase font size">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                <div class="formatting-buttons">
+                                    <button class="format-btn" id="bold-btn" data-format="bold" title="Bold">
+                                        <i class="fas fa-bold"></i>
+                                    </button>
+                                    <button class="format-btn" id="italic-btn" data-format="italic" title="Italic">
+                                        <i class="fas fa-italic"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="component-categories">
+                        <div class="component-category">
+                            <h4>Text Components</h4>
+                            <div class="component-items">
+                                <div class="component-item" draggable="true" data-component-type="heading">
+                                    <i class="fas fa-heading"></i>
+                                    <span>Heading</span>
+                                </div>
+                                <div class="component-item" draggable="true" data-component-type="paragraph">
+                                    <i class="fas fa-paragraph"></i>
+                                    <span>Paragraph</span>
+                                </div>
+                                <div class="component-item" draggable="true" data-component-type="definition">
+                                    <i class="fas fa-book-open"></i>
+                                    <span>Definition</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="component-category">
+                            <h4>Learning Components</h4>
+                            <div class="component-items">
+                                <div class="component-item" draggable="true" data-component-type="step-sequence">
+                                    <i class="fas fa-list-ol"></i>
+                                    <span>Step Sequence</span>
+                                </div>
+                                <div class="component-item" draggable="true" data-component-type="worked-example">
+                                    <i class="fas fa-calculator"></i>
+                                    <span>Worked Example</span>
+                                </div>
+                                <div class="component-item" draggable="true" data-component-type="memory-trick">
+                                    <i class="fas fa-lightbulb"></i>
+                                    <span>Memory Trick</span>
+                                </div>
+                                <div class="component-item" draggable="true" data-component-type="callout-box">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    <span>Callout Box</span>
+                                </div>
+                                <div class="component-item" draggable="true" data-component-type="hero-number">
+                                    <i class="fas fa-chart-line"></i>
+                                    <span>Hero Number</span>
+                                </div>
+                                <div class="component-item" draggable="true" data-component-type="four-pictures">
+                                    <i class="fas fa-images"></i>
+                                    <span>Four Pictures</span>
+                                </div>
+                                <div class="component-item" draggable="true" data-component-type="three-pictures">
+                                    <i class="fas fa-image"></i>
+                                    <span>Three Pictures</span>
+                                </div>
+                                <div class="component-item" draggable="true" data-component-type="two-pictures">
+                                    <i class="fas fa-images"></i>
+                                    <span>Two Pictures</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Hidden API Buttons for AI Interaction -->
+                    <div id="api-buttons" style="display:none;">
+                        <!-- Template Component Buttons -->
+                        <button id="api-add-heading" onclick="insertComponent('heading')">Add Heading</button>
+                        <button id="api-add-paragraph" onclick="insertComponent('paragraph')">Add Paragraph</button>
+                        <button id="api-add-definition" onclick="insertComponent('definition')">Add Definition</button>
+                        <button id="api-add-step-sequence" onclick="insertComponent('step-sequence')">Add Step Sequence</button>
+                        <button id="api-add-worked-example" onclick="insertComponent('worked-example')">Add Worked Example</button>
+                        <button id="api-add-memory-trick" onclick="insertComponent('memory-trick')">Add Memory Trick</button>
+                        <button id="api-add-callout-box" onclick="insertComponent('callout-box')">Add Callout Box</button>
+                        <button id="api-add-hero-number" onclick="insertComponent('hero-number')">Add Hero Number</button>
+                        <button id="api-add-four-pictures" onclick="insertComponent('four-pictures')">Add Four Pictures</button>
+                        <button id="api-add-three-pictures" onclick="insertComponent('three-pictures')">Add Three Pictures</button>
+                        <button id="api-add-two-pictures" onclick="insertComponent('two-pictures')">Add Two Pictures</button>
+
+                        <!-- Node Management Buttons -->
+                        <button id="api-add-node" onclick="addNewNode()">Add Node</button>
+                        <button id="api-delete-node" onclick="deleteCurrentNode()">Delete Node</button>
+                        <button id="api-select-node" onclick="selectNode(arguments[0])">Select Node</button>
+
+                        <!-- Content Management Buttons -->
+                        <button id="api-set-content" onclick="setNodeContent(arguments[0], arguments[1])">Set Content</button>
+                        <button id="api-get-content" onclick="getNodeContent(arguments[0])">Get Content</button>
+
+                        <!-- Template Assignment Buttons -->
+                        <button id="api-assign-template" onclick="assignTemplate(arguments[0], arguments[1])">Assign Template</button>
+                    </div>
+                </div>
+
+                <!-- Three-Panel Editor Layout -->
+                <div class="editor-layout">
+                    <!-- Left Panel - Node Navigation -->
+                    <div id="node-navigation-panel" class="editor-panel">
+                        <div class="panel-header">
+                            <button class="toggle-panel-btn" id="toggle-nodes-btn" title="Collapse panel">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <h3>Nodes</h3>
+                            <button class="add-node-btn" id="add-node-btn">
+                                <i class="fas fa-plus"></i>
+                                Add Node
+                            </button>
+                        </div>
+                        <div class="node-list" id="node-list">
+                            <div class="node-item active" data-node-id="N001">
+                                <div class="node-indicator"></div>
+                                <div class="node-info">
+                                    <div class="node-id">N001</div>
+                                    <div class="node-title">N001</div>
+                                </div>
+                                <div class="node-status empty"></div>
+                            </div>
+                            <div class="node-item" data-node-id="N002">
+                                <div class="node-indicator"></div>
+                                <div class="node-info">
+                                    <div class="node-id">N002</div>
+                                    <div class="node-title">Adding Fractions</div>
+                                </div>
+                                <div class="node-status empty"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Center Panel - Template Editor -->
+                    <div id="template-editor-panel" class="editor-panel">
+                        <div class="panel-header">
+                            <h3>Template Editor</h3>
+                            <div class="editor-controls">
+                                <button class="save-btn" id="save-btn">
+                                    <i class="fas fa-save"></i>
+                                    Save
+                                </button>
+                            </div>
+                        </div>
+                        <div class="editor-canvas" id="editor-canvas">
+                            <div class="drop-zone" id="drop-zone">
+                                <div class="drop-zone-message">
+                                    <i class="fas fa-mouse-pointer"></i>
+                                    <h4>Start Building</h4>
+                                    <p>Drag components from the toolbar above to begin creating your content</p>
+                                </div>
+                                <div class="drop-zone-pdf-upload" id="ai-upload-zone">
+                                    <i class="fas fa-file-pdf"></i>
+                                    <h4>AI Content Generation</h4>
+                                    <p>Drop PDF here for AI suggestions</p>
+                                    <input type="file" id="pdf-upload-input" accept=".pdf" style="display: none;">
+                                    <div class="upload-progress" id="upload-progress" style="display: none;">
+                                        <i class="fas fa-spinner fa-spin"></i>
+                                        <span id="progress-text">LL AI is creating lesson</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel - Live Preview -->
+                    <div id="live-preview-panel" class="editor-panel">
+                        <div class="panel-header">
+                            <h3>Live Preview</h3>
+                            <div class="preview-controls">
+                                <select class="device-selector" id="device-selector">
+                                    <option value="desktop">Desktop</option>
+                                    <option value="tablet">Tablet</option>
+                                    <option value="mobile">Mobile</option>
+                                </select>
+                                <button class="preview-student-btn" id="preview-student-btn" title="Preview as Student">
+                                    <i class="fas fa-eye"></i> Student View
+                                </button>
+                                <button class="export-btn" id="export-btn">Export</button>
+                            </div>
+                        </div>
+                        <div class="preview-container" id="preview-container">
+                            <div class="preview-frame">
+                                <div class="preview-content" id="preview-content">
+                                    <div class="preview-placeholder">
+                                        <i class="fas fa-eye"></i>
+                                        <h4>Preview</h4>
+                                        <p>Your content will appear here as you build it</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

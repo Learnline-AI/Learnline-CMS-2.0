@@ -1,0 +1,36 @@
+{
+  "components": [
+    {
+      "type": "heading",
+      "order": 0,
+      "parameters": {
+        "type": "heading",
+        "text": "Node N002 Content - Different Data"
+      },
+      "confidence": 1.0,
+      "styling": "background: transparent;"
+    },
+    {
+      "type": "paragraph",
+      "order": 1,
+      "parameters": {
+        "type": "paragraph",
+        "text": "This is completely different content for node N002 to test node switching."
+      },
+      "confidence": 1.0,
+      "styling": "background: lightblue; padding: 12px;"
+    },
+    {
+      "type": "memory-trick",
+      "order": 2,
+      "parameters": {
+        "type": "memory-trick",
+        "text": "N002 means this is the second node!"
+      },
+      "confidence": 1.0,
+      "styling": "background: lightgreen; padding: 12px;"
+    }
+  ],
+  "suggested_template": "simple-list",
+  "overall_confidence": 1.0
+}

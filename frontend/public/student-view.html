@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student View | Learnline CMS</title>
+    <link rel="stylesheet" href="student-view.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="main-layout">
+        <div class="content-area">
+            <!-- Header -->
+            <div class="header">
+                <h1 id="node-title">Loading...</h1>
+                <p id="node-subtitle">Node content will appear here</p>
+            </div>
+
+            <!-- Content Container - Components will be injected here -->
+            <div id="student-content">
+                <div class="loading-container">
+                    <div class="spinner"></div>
+                    <p>Loading content...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chatbot Area - Fixed Right Panel -->
+    <div class="chatbot-area">
+        <div class="chat-input-area">
+            <div class="chat-input-container" id="text-input-mode">
+                <button class="input-mode-toggle" title="Microphone">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <input type="text" class="chat-input" placeholder="Type your question here..." id="chat-input">
+                <button class="chat-send-btn" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="student-view.js"></script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Highlight Box - {title}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            background-color: #f8f9fa;
+        }
+
+        .highlight-container {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 3px solid #007acc;
+        }
+
+        .highlight-header {
+            background: linear-gradient(135deg, #007acc, #0056b3);
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+        }
+
+        .highlight-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .highlight-content {
+            display: flex;
+            min-height: 400px;
+        }
+
+        .image-panel {
+            flex: 1;
+            background: #f1f3f4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            border-right: 2px solid #e9ecef;
+        }
+
+        .image-container {
+            width: 100%;
+            max-width: 300px;
+            text-align: center;
+        }
+
+        .highlight-image {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .image-placeholder {
+            width: 100%;
+            height: 200px;
+            background: #e9ecef;
+            border: 2px dashed #adb5bd;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .content-panel {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .highlight-text {
+            font-size: 1.1rem;
+            line-height: 1.7;
+            color: #2c3e50;
+        }
+
+        .highlight-text h1, .highlight-text h2, .highlight-text h3 {
+            color: #007acc;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .highlight-text h1 { font-size: 1.6rem; }
+        .highlight-text h2 { font-size: 1.4rem; }
+        .highlight-text h3 { font-size: 1.2rem; }
+
+        .highlight-text p {
+            margin-bottom: 15px;
+        }
+
+        .highlight-text strong {
+            color: #d63384;
+            font-weight: 600;
+        }
+
+        .highlight-text em {
+            color: #0d6efd;
+            font-style: italic;
+        }
+
+        .highlight-text ul, .highlight-text ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .highlight-text li {
+            margin-bottom: 8px;
+        }
+
+        .text-small { font-size: 0.9rem; }
+        .text-medium { font-size: 1.1rem; }
+        .text-large { font-size: 1.3rem; }
+
+        @media (max-width: 768px) {
+            .highlight-container {
+                margin: 20px;
+                border-radius: 8px;
+            }
+
+            .highlight-content {
+                flex-direction: column;
+                min-height: auto;
+            }
+
+            .image-panel {
+                border-right: none;
+                border-bottom: 2px solid #e9ecef;
+                padding: 20px;
+            }
+
+            .content-panel {
+                padding: 30px 20px;
+            }
+
+            .highlight-title {
+                font-size: 1.5rem;
+            }
+
+            .highlight-text {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .highlight-container {
+                margin: 10px;
+            }
+
+            .highlight-header {
+                padding: 15px 20px;
+            }
+
+            .content-panel {
+                padding: 20px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="highlight-container">
+        <div class="highlight-header">
+            <h1 class="highlight-title">{title}</h1>
+        </div>
+
+        <div class="highlight-content">
+            <div class="image-panel">
+                <div class="image-container">
+                    {image_content}
+                </div>
+            </div>
+
+            <div class="content-panel">
+                <div class="highlight-text">
+                    {content_text}
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

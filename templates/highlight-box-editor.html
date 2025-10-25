@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Highlight Box Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f8f9fa;
+            color: #2c3e50;
+        }
+
+        .editor-container {
+            max-width: 1400px;
+            margin: 20px auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 20px;
+        }
+
+        .editor-panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, #007acc, #0056b3);
+            color: white;
+            padding: 20px;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .panel-content {
+            padding: 25px;
+        }
+
+        /* Editor Panel Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #007acc;
+            box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.1);
+        }
+
+        /* Image Upload Area */
+        .image-upload {
+            border: 3px dashed #adb5bd;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .image-upload:hover {
+            border-color: #007acc;
+            background: #e8f4fd;
+        }
+
+        .image-upload.dragover {
+            border-color: #007acc;
+            background: #e8f4fd;
+            transform: scale(1.02);
+        }
+
+        .upload-text {
+            font-size: 1.1rem;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            font-size: 0.9rem;
+            color: #adb5bd;
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .remove-image {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            display: none;
+        }
+
+        /* Text Editor */
+        .editor-toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-button {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .toolbar-button:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+        .toolbar-button.active {
+            background: #007acc;
+            color: white;
+            border-color: #007acc;
+        }
+
+        .text-editor {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            line-height: 1.6;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .text-editor:focus {
+            outline: none;
+            border-color: #007acc;
+            box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.1);
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #007acc;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 122, 204, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #007acc;
+            border: 2px solid #007acc;
+        }
+
+        .btn-outline:hover {
+            background: #007acc;
+            color: white;
+        }
+
+        /* Preview Panel */
+        .preview-content {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .editor-container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .panel-content {
+                padding: 20px;
+            }
+
+            .editor-toolbar {
+                gap: 5px;
+            }
+
+            .toolbar-button {
+                padding: 6px 10px;
+                font-size: 0.8rem;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .success {
+            color: #155724;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="editor-container">
+        <!-- Editor Panel -->
+        <div class="editor-panel">
+            <div class="panel-header">
+                ✏️ Highlight Box Editor
+            </div>
+            <div class="panel-content">
+                <form id="highlightBoxForm">
+                    <!-- Title Input -->
+                    <div class="form-group">
+                        <label class="form-label" for="titleInput">Title</label>
+                        <input type="text" id="titleInput" class="form-input"
+                               placeholder="Enter a compelling title for your highlight box">
+                    </div>
+
+                    <!-- Image Upload -->
+                    <div class="form-group">
+                        <label class="form-label">Image (Optional)</label>
+                        <div class="image-upload" id="imageUpload">
+                            <div class="upload-content" id="uploadContent">
+                                <div class="upload-text">📁 Drop an image here or click to upload</div>
+                                <div class="upload-subtext">Supports JPG, PNG, GIF, WebP</div>
+                            </div>
+                            <button type="button" class="remove-image" id="removeImage">✕</button>
+                        </div>
+                        <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                    </div>
+
+                    <!-- Text Editor -->
+                    <div class="form-group">
+                        <label class="form-label" for="contentEditor">Content</label>
+                        <div class="editor-toolbar">
+                            <button type="button" class="toolbar-button" data-format="bold">**Bold**</button>
+                            <button type="button" class="toolbar-button" data-format="italic">*Italic*</button>
+                            <button type="button" class="toolbar-button" data-format="header1"># Header</button>
+                            <button type="button" class="toolbar-button" data-format="header2">## Subheader</button>
+                            <button type="button" class="toolbar-button" data-format="list">• List</button>
+                        </div>
+                        <textarea id="contentEditor" class="text-editor"
+                                  placeholder="Enter your content here. Use markdown formatting:&#10;&#10;**Bold text**&#10;*Italic text*&#10;# Header&#10;## Subheader&#10;- List item&#10;- Another item&#10;&#10;Example: Reading fractions is **easy**! The top number tells you how many slices you took."></textarea>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons">
+                        <button type="button" class="btn btn-outline" id="cancelBtn">Cancel</button>
+                        <button type="button" class="btn btn-secondary" id="previewBtn">Preview</button>
+                        <button type="submit" class="btn btn-primary" id="saveBtn">Save Highlight Box</button>
+                    </div>
+
+                    <div class="loading" id="loading">Saving your highlight box...</div>
+                    <div class="error" id="error"></div>
+                    <div class="success" id="success"></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Preview Panel -->
+        <div class="editor-panel">
+            <div class="panel-header">
+                👁️ Live Preview
+            </div>
+            <div class="panel-content">
+                <div class="preview-content" id="previewContent">
+                    <div style="padding: 40px; text-align: center; color: #6c757d;">
+                        <div style="font-size: 3rem; margin-bottom: 20px;">📝</div>
+                        <div>Start editing to see your highlight box preview</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class HighlightBoxEditor {
+            constructor() {
+                this.currentImageUrl = null;
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.setupImageUpload();
+                this.updatePreview();
+            }
+
+            bindEvents() {
+                // Form submission
+                document.getElementById('highlightBoxForm').addEventListener('submit', (e) => this.handleSave(e));
+
+                // Real-time preview updates
+                document.getElementById('titleInput').addEventListener('input', () => this.updatePreview());
+                document.getElementById('contentEditor').addEventListener('input', () => this.updatePreview());
+
+                // Toolbar buttons
+                document.querySelectorAll('.toolbar-button').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.handleFormat(e));
+                });
+
+                // Action buttons
+                document.getElementById('previewBtn').addEventListener('click', () => this.updatePreview());
+                document.getElementById('cancelBtn').addEventListener('click', () => this.handleCancel());
+                document.getElementById('removeImage').addEventListener('click', () => this.removeImage());
+            }
+
+            setupImageUpload() {
+                const imageUpload = document.getElementById('imageUpload');
+                const imageInput = document.getElementById('imageInput');
+
+                // Click to upload
+                imageUpload.addEventListener('click', () => {
+                    if (!this.currentImageUrl) {
+                        imageInput.click();
+                    }
+                });
+
+                // File input change
+                imageInput.addEventListener('change', (e) => this.handleImageUpload(e));
+
+                // Drag and drop
+                imageUpload.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    imageUpload.classList.add('dragover');
+                });
+
+                imageUpload.addEventListener('dragleave', () => {
+                    imageUpload.classList.remove('dragover');
+                });
+
+                imageUpload.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    imageUpload.classList.remove('dragover');
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0 && files[0].type.startsWith('image/')) {
+                        this.uploadImage(files[0]);
+                    }
+                });
+            }
+
+            async handleImageUpload(e) {
+                const file = e.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    await this.uploadImage(file);
+                }
+            }
+
+            async uploadImage(file) {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const response = await fetch('/upload-image', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        this.currentImageUrl = result.url;
+                        this.showImagePreview(result.url);
+                        this.updatePreview();
+                    } else {
+                        throw new Error('Upload failed');
+                    }
+                } catch (error) {
+                    this.showError('Failed to upload image. Please try again.');
+                    console.error('Image upload error:', error);
+                }
+            }
+
+            showImagePreview(url) {
+                const uploadContent = document.getElementById('uploadContent');
+                const removeBtn = document.getElementById('removeImage');
+
+                uploadContent.innerHTML = `<img src="${url}" alt="Preview" class="image-preview">`;
+                removeBtn.style.display = 'block';
+            }
+
+            removeImage() {
+                this.currentImageUrl = null;
+                const uploadContent = document.getElementById('uploadContent');
+                const removeBtn = document.getElementById('removeImage');
+
+                uploadContent.innerHTML = `
+                    <div class="upload-text">📁 Drop an image here or click to upload</div>
+                    <div class="upload-subtext">Supports JPG, PNG, GIF, WebP</div>
+                `;
+                removeBtn.style.display = 'none';
+                this.updatePreview();
+            }
+
+            handleFormat(e) {
+                const format = e.target.getAttribute('data-format');
+                const editor = document.getElementById('contentEditor');
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                const selectedText = editor.value.substring(start, end);
+
+                let replacement = '';
+                switch (format) {
+                    case 'bold':
+                        replacement = `**${selectedText || 'bold text'}**`;
+                        break;
+                    case 'italic':
+                        replacement = `*${selectedText || 'italic text'}*`;
+                        break;
+                    case 'header1':
+                        replacement = `# ${selectedText || 'Header'}`;
+                        break;
+                    case 'header2':
+                        replacement = `## ${selectedText || 'Subheader'}`;
+                        break;
+                    case 'list':
+                        replacement = `- ${selectedText || 'List item'}`;
+                        break;
+                }
+
+                editor.value = editor.value.substring(0, start) + replacement + editor.value.substring(end);
+                editor.focus();
+                this.updatePreview();
+            }
+
+            async updatePreview() {
+                const title = document.getElementById('titleInput').value || 'Your Highlight Box';
+                const content = document.getElementById('contentEditor').value || 'Start typing your content here...';
+
+                try {
+                    const response = await fetch('/create-highlight-box', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            title: title,
+                            content: content,
+                            image_url: this.currentImageUrl
+                        })
+                    });
+
+                    if (response.ok) {
+                        const html = await response.text();
+                        document.getElementById('previewContent').innerHTML = html;
+                    }
+                } catch (error) {
+                    console.error('Preview update error:', error);
+                }
+            }
+
+            async handleSave(e) {
+                e.preventDefault();
+
+                const title = document.getElementById('titleInput').value;
+                const content = document.getElementById('contentEditor').value;
+
+                if (!title.trim() || !content.trim()) {
+                    this.showError('Please fill in both title and content fields.');
+                    return;
+                }
+
+                this.showLoading(true);
+                this.hideMessages();
+
+                try {
+                    // For now, we'll use a placeholder node_id
+                    const nodeId = 'N001'; // This would come from the URL or context in a real implementation
+
+                    const response = await fetch(`/update-highlight-box/${nodeId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            title: title,
+                            content: content,
+                            image_url: this.currentImageUrl
+                        })
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        this.showSuccess('Highlight box saved successfully!');
+                        console.log('Saved:', result);
+                    } else {
+                        throw new Error('Save failed');
+                    }
+                } catch (error) {
+                    this.showError('Failed to save highlight box. Please try again.');
+                    console.error('Save error:', error);
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            handleCancel() {
+                if (confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
+                    // Reset form
+                    document.getElementById('highlightBoxForm').reset();
+                    this.removeImage();
+                    this.updatePreview();
+                }
+            }
+
+            showLoading(show) {
+                document.getElementById('loading').style.display = show ? 'block' : 'none';
+                document.getElementById('saveBtn').disabled = show;
+            }
+
+            showError(message) {
+                const errorDiv = document.getElementById('error');
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+            }
+
+            showSuccess(message) {
+                const successDiv = document.getElementById('success');
+                successDiv.textContent = message;
+                successDiv.style.display = 'block';
+            }
+
+            hideMessages() {
+                document.getElementById('error').style.display = 'none';
+                document.getElementById('success').style.display = 'none';
+            }
+        }
+
+        // Initialize the editor when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new HighlightBoxEditor();
+        });
+    </script>
+</body>
+</html>

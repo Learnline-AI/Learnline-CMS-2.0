@@ -1,0 +1,61 @@
+{
+  "components": [
+    {
+      "type": "heading",
+      "order": 0,
+      "parameters": {
+        "type": "heading",
+        "text": "Understanding Fractions"
+      },
+      "confidence": 1.0,
+      "styling": "background: transparent;"
+    },
+    {
+      "type": "paragraph", 
+      "order": 1,
+      "parameters": {
+        "type": "paragraph",
+        "text": "Fractions represent parts of a whole number."
+      },
+      "confidence": 1.0,
+      "styling": "background: blue; padding: 12px;"
+    },
+    {
+      "type": "definition",
+      "order": 2,
+      "parameters": {
+        "type": "definition",
+        "term": "Numerator",
+        "definition": "The top number in a fraction"
+      },
+      "confidence": 1.0,
+      "styling": "background: transparent;"
+    },
+    {
+      "type": "step-sequence",
+      "order": 3,
+      "parameters": {
+        "type": "step-sequence",
+        "steps": [
+          "Look at the numerator",
+          "Look at the denominator", 
+          "Understand the relationship"
+        ]
+      },
+      "confidence": 1.0,
+      "styling": "background: red; padding: 12px;"
+    },
+    {
+      "type": "memory-trick",
+      "order": 4,
+      "parameters": {
+        "type": "memory-trick",
+        "text": "Bigger denominator = smaller pieces!"
+      },
+      "confidence": 1.0,
+      "styling": "background: green; padding: 12px;"
+    }
+  ],
+  "suggested_template": "text-heavy",
+  "overall_confidence": 1.0
+}

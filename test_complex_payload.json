@@ -1,0 +1,80 @@
+{
+  "components": [
+    {
+      "type": "worked-example",
+      "order": 0,
+      "parameters": {
+        "type": "worked-example",
+        "problem": "Add 1/4 + 1/4",
+        "solution": "Since denominators are the same, add numerators: 1 + 1 = 2",
+        "answer": "2/4 = 1/2"
+      },
+      "confidence": 1.0,
+      "styling": "background: transparent;"
+    },
+    {
+      "type": "four-pictures",
+      "order": 1,
+      "parameters": {
+        "type": "four-pictures",
+        "pictures": {
+          "image1": {
+            "title": "Pizza Slices",
+            "body": "3 out of 4 slices eaten",
+            "imagePath": "/uploads/pizza.jpg",
+            "imageUrl": "data:image/jpeg;base64,/9j/4AAQSkZJR..."
+          },
+          "image2": {
+            "title": "Pie Chart",
+            "body": "Visual fraction representation",
+            "imagePath": "",
+            "imageUrl": ""
+          },
+          "image3": {
+            "title": "Number Line",
+            "body": "Fractions on a number line",
+            "imagePath": "/uploads/numberline.png",
+            "imageUrl": ""
+          },
+          "image4": {
+            "title": "Real Objects",
+            "body": "Everyday fraction examples",
+            "imagePath": "",
+            "imageUrl": ""
+          }
+        }
+      },
+      "confidence": 1.0,
+      "styling": "background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); padding: 12px; border-radius: 6px;"
+    },
+    {
+      "type": "three-pictures",
+      "order": 2,
+      "parameters": {
+        "type": "three-pictures",
+        "pictures": {
+          "image1": {"title": "Example 1", "body": "First visual example", "imagePath": "", "imageUrl": ""},
+          "image2": {"title": "Example 2", "body": "Second visual example", "imagePath": "", "imageUrl": ""},
+          "image3": {"title": "Example 3", "body": "Third visual example", "imagePath": "", "imageUrl": ""}
+        }
+      },
+      "confidence": 1.0,
+      "styling": "background: transparent;"
+    },
+    {
+      "type": "two-pictures",
+      "order": 3,
+      "parameters": {
+        "type": "two-pictures",
+        "pictures": {
+          "image1": {"title": "Before", "body": "Situation before applying concept", "imagePath": "", "imageUrl": ""},
+          "image2": {"title": "After", "body": "Situation after applying concept", "imagePath": "", "imageUrl": ""}
+        }
+      },
+      "confidence": 1.0,
+      "styling": "background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); padding: 12px; border-radius: 6px;"
+    }
+  ],
+  "suggested_template": "mixed-media",
+  "overall_confidence": 1.0
+}

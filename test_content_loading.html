@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Content Loading</title>
+</head>
+<body>
+    <h1>Testing Content Loading</h1>
+    <button onclick="loadN001()">Load N001 Content</button>
+    <button onclick="loadN002()">Load N002 Content</button>
+    <div id="result"></div>
+
+    <script>
+        async function loadN001() {
+            await testLoadContent('N001');
+        }
+        
+        async function loadN002() {
+            await testLoadContent('N002');
+        }
+        
+        async function testLoadContent(nodeId) {
+            try {
+                const response = await fetch(`http://localhost:8000/nodes/${nodeId}/components`);
+                const data = await response.json();
+                
+                const result = document.getElementById('result');
+                result.innerHTML = `
+                    <h2>Node ${nodeId} Content:</h2>
+                    <p>Total components: ${data.total_components}</p>
+                    <ul>
+                        ${data.components.map(c => 
+                            `<li>${c.order}: ${c.type} - ${
+                                c.parameters.text || 
+                                c.parameters.term || 
+                                'Complex data (images/steps/etc)'
+                            }</li>`
+                        ).join('')}
+                    </ul>
+                `;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+{
+  "components": [
+    {
+      "type": "heading",
+      "order": 0,
+      "parameters": {
+        "type": "heading",
+        "text": "Complete Test of All 8 Component Types"
+      },
+      "confidence": 1.0,
+      "styling": "background: transparent;"
+    },
+    {
+      "type": "paragraph",
+      "order": 1,
+      "parameters": {
+        "type": "paragraph",
+        "text": "This is a comprehensive test to ensure all component types are saved and retrieved correctly."
+      },
+      "confidence": 1.0,
+      "styling": "background: blue; padding: 12px;"
+    },
+    {
+      "type": "definition",
+      "order": 2,
+      "parameters": {
+        "type": "definition",
+        "term": "Component Persistence",
+        "definition": "The ability to save and retrieve component data without loss"
+      },
+      "confidence": 1.0,
+      "styling": "background: transparent;"
+    },
+    {
+      "type": "step-sequence",
+      "order": 3,
+      "parameters": {
+        "type": "step-sequence",
+        "steps": [
+          "First step in the sequence",
+          "Second step with more details",
+          "Final step to complete the process"
+        ]
+      },
+      "confidence": 1.0,
+      "styling": "background: red; padding: 12px;"
+    },
+    {
+      "type": "worked-example",
+      "order": 4,
+      "parameters": {
+        "type": "worked-example",
+        "problem": "How to save component data?",
+        "solution": "Use the extractComponentData function and serialize as JSON",
+        "answer": "All component types are now preserved correctly"
+      },
+      "confidence": 1.0,
+      "styling": "background: transparent;"
+    },
+    {
+      "type": "memory-trick",
+      "order": 5,
+      "parameters": {
+        "type": "memory-trick",
+        "text": "Remember: JSON serialization is key to persistence!"
+      },
+      "confidence": 1.0,
+      "styling": "background: green; padding: 12px;"
+    },
+    {
+      "type": "four-pictures",
+      "order": 6,
+      "parameters": {
+        "type": "four-pictures",
+        "pictures": {
+          "image1": {"title": "Image 1", "body": "Description 1", "imagePath": "/path1.jpg", "imageUrl": ""},
+          "image2": {"title": "Image 2", "body": "Description 2", "imagePath": "/path2.jpg", "imageUrl": ""},
+          "image3": {"title": "Image 3", "body": "Description 3", "imagePath": "/path3.jpg", "imageUrl": ""},
+          "image4": {"title": "Image 4", "body": "Description 4", "imagePath": "/path4.jpg", "imageUrl": ""}
+        }
+      },
+      "confidence": 1.0,
+      "styling": "background: purple; padding: 12px;"
+    },
+    {
+      "type": "three-pictures",
+      "order": 7,
+      "parameters": {
+        "type": "three-pictures",
+        "pictures": {
+          "image1": {"title": "Three-1", "body": "First of three", "imagePath": "", "imageUrl": ""},
+          "image2": {"title": "Three-2", "body": "Second of three", "imagePath": "", "imageUrl": ""},
+          "image3": {"title": "Three-3", "body": "Third of three", "imagePath": "", "imageUrl": ""}
+        }
+      },
+      "confidence": 1.0,
+      "styling": "background: orange; padding: 12px;"
+    },
+    {
+      "type": "two-pictures",
+      "order": 8,
+      "parameters": {
+        "type": "two-pictures",
+        "pictures": {
+          "image1": {"title": "Two-1", "body": "First of two", "imagePath": "", "imageUrl": ""},
+          "image2": {"title": "Two-2", "body": "Second of two", "imagePath": "", "imageUrl": ""}
+        }
+      },
+      "confidence": 1.0,
+      "styling": "background: yellow; padding: 12px;"
+    }
+  ],
+  "suggested_template": "mixed-media",
+  "overall_confidence": 1.0
+}

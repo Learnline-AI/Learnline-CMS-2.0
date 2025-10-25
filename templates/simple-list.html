@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple List - {title}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #2c3e50;
+            background-color: #f8f9fa;
+        }
+
+        .list-container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .list-header {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .list-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .list-content {
+            padding: 40px;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+            transition: all 0.3s ease;
+        }
+
+        .step-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .step-number {
+            flex: 0 0 40px;
+            height: 40px;
+            background: #28a745;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-right: 20px;
+            margin-top: 5px;
+        }
+
+        .step-content {
+            flex: 1;
+            font-size: 1.1rem;
+            line-height: 1.7;
+        }
+
+        .step-content h1 {
+            font-size: 1.4rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .step-content h2 {
+            font-size: 1.2rem;
+            color: #34495e;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .step-content h3 {
+            font-size: 1.1rem;
+            color: #34495e;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .step-content p {
+            margin-bottom: 10px;
+        }
+
+        .step-content strong {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+
+        .step-content em {
+            color: #8e44ad;
+            font-style: italic;
+        }
+
+        .step-content ul, .step-content ol {
+            margin-left: 20px;
+            margin-bottom: 10px;
+        }
+
+        .step-content li {
+            margin-bottom: 5px;
+        }
+
+        .bullet-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #fff;
+            border-radius: 6px;
+            border-left: 3px solid #20c997;
+        }
+
+        .bullet-icon {
+            flex: 0 0 20px;
+            height: 20px;
+            background: #20c997;
+            border-radius: 50%;
+            margin-right: 15px;
+            margin-top: 8px;
+        }
+
+        .bullet-content {
+            flex: 1;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .simple-content {
+            font-size: 1.1rem;
+            line-height: 1.7;
+        }
+
+        .simple-content h1 {
+            font-size: 1.6rem;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .simple-content h2 {
+            font-size: 1.4rem;
+            color: #34495e;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .simple-content h3 {
+            font-size: 1.2rem;
+            color: #34495e;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .simple-content p {
+            margin-bottom: 15px;
+        }
+
+        .simple-content strong {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+
+        .simple-content em {
+            color: #8e44ad;
+            font-style: italic;
+        }
+
+        .simple-content ul, .simple-content ol {
+            margin-left: 25px;
+            margin-bottom: 15px;
+        }
+
+        .simple-content li {
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .list-container {
+                margin: 20px;
+            }
+
+            .list-content {
+                padding: 25px;
+            }
+
+            .list-title {
+                font-size: 1.8rem;
+            }
+
+            .step-item {
+                padding: 15px;
+                margin-bottom: 20px;
+            }
+
+            .step-number {
+                flex: 0 0 35px;
+                height: 35px;
+                font-size: 1rem;
+                margin-right: 15px;
+            }
+
+            .step-content {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .list-header {
+                padding: 20px;
+            }
+
+            .list-content {
+                padding: 20px;
+            }
+
+            .list-title {
+                font-size: 1.5rem;
+            }
+
+            .step-item {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .step-number {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="list-container">
+        <div class="list-header">
+            <h1 class="list-title">{title}</h1>
+        </div>
+
+        <div class="list-content">
+            <div class="simple-content">
+                {content}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

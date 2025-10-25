@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMS API Interface</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        input { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }
+        .node-item { background: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 4px; border-left: 4px solid #007bff; }
+        .error { color: red; margin: 10px 0; }
+        .template-buttons { margin: 20px 0; }
+        .template-btn { background: #6c757d; margin: 5px; padding: 8px 16px; font-size: 14px; }
+        .template-btn.selected { background: #28a745; }
+        .template-btn:hover { background: #5a6268; }
+        .template-btn.selected:hover { background: #218838; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CMS API Interface</h1>
+
+        <h2>Add New Node</h2>
+        <input type="text" id="nodeId" placeholder="Node ID (e.g., N005)">
+        <input type="text" id="nodeTitle" placeholder="Node Title">
+        <input type="text" id="chapterId" placeholder="Chapter ID (e.g., CH01)">
+        <button onclick="addNode()">Add Node</button>
+
+        <div id="error" class="error"></div>
+
+        <h2>Template Selection</h2>
+        <div class="template-buttons" id="templateButtons"></div>
+        <p>Selected Template: <span id="selectedTemplate">None</span></p>
+
+        <h2>Nodes List</h2>
+        <div id="nodesList"></div>
+
+        <div id="content-section" style="display:none; margin-top: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 4px; background: #f8f9fa;">
+            <h3>Content for Node <span id="content-node-id"></span></h3>
+
+            <form id="content-form">
+                <div style="margin-bottom: 15px;">
+                    <label><strong>Explanation:</strong></label>
+                    <textarea id="explanation" rows="3" style="width: 100%; margin-top: 5px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                        placeholder="Clear explanation of the concept..."></textarea>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label><strong>Real World Example:</strong></label>
+                    <textarea id="real-world-example" rows="3" style="width: 100%; margin-top: 5px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                        placeholder="Practical example students can relate to..."></textarea>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label><strong>Textbook Content:</strong></label>
+                    <textarea id="textbook-content" rows="3" style="width: 100%; margin-top: 5px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                        placeholder="Formal academic content..."></textarea>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label><strong>Memory Trick:</strong></label>
+                    <textarea id="memory-trick" rows="3" style="width: 100%; margin-top: 5px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                        placeholder="Helpful mnemonic or trick to remember..."></textarea>
+                </div>
+
+                <button type="submit" style="background: #007bff; color: white; padding: 10px 20px; border: none; cursor: pointer; border-radius: 4px;">
+                    Save Content
+                </button>
+                <div id="content-status" style="margin-top: 10px;"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8006';
+        let selectedTemplate = null;
+
+        // Load templates on page load
+        window.addEventListener('load', loadTemplates);
+
+        async function addNode() {
+            const nodeId = document.getElementById('nodeId').value;
+            const title = document.getElementById('nodeTitle').value;
+            const chapterId = document.getElementById('chapterId').value;
+            const errorDiv = document.getElementById('error');
+
+            errorDiv.textContent = '';
+
+            if (!nodeId || !title || !chapterId) {
+                errorDiv.textContent = 'Please fill in all fields';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/nodes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ node_id: nodeId, title: title, chapter_id: chapterId })
+                });
+
+                if (response.ok) {
+                    const node = await response.json();
+                    displayNode(node);
+                    clearForm();
+                } else {
+                    const error = await response.json();
+                    errorDiv.textContent = error.detail || 'Error creating node';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Network error: ' + err.message;
+            }
+        }
+
+        function displayNode(node) {
+            const nodesList = document.getElementById('nodesList');
+            const nodeDiv = document.createElement('div');
+            nodeDiv.className = 'node-item';
+            nodeDiv.id = `node-${node.node_id}`;
+
+            const templateInfo = node.assigned_template
+                ? `<span style="color: #28a745; font-weight: bold;">[${node.assigned_template}]</span>`
+                : '<span style="color: #6c757d;">[No template]</span>';
+
+            nodeDiv.innerHTML = `
+                <strong>${node.node_id}</strong>: ${node.title} (${node.chapter_id}) ${templateInfo}
+                <button onclick="assignTemplate('${node.node_id}')" style="margin-left: 10px; padding: 4px 8px; font-size: 12px;">Assign Template</button>
+                <button onclick="showContentForm('${node.node_id}')" style="margin-left: 5px; padding: 4px 8px; font-size: 12px; background: #28a745;">Edit Content</button>
+            `;
+            nodesList.appendChild(nodeDiv);
+        }
+
+        async function assignTemplate(nodeId) {
+            if (!selectedTemplate) {
+                document.getElementById('error').textContent = 'Please select a template first';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/nodes/${nodeId}/template`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ node_id: nodeId, template_id: selectedTemplate.template_id })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    document.getElementById('error').textContent = '';
+
+                    // Update the node display to show assigned template
+                    updateNodeTemplate(nodeId, selectedTemplate.template_id);
+
+                    alert(`Template "${selectedTemplate.name}" assigned to node ${nodeId}`);
+                } else {
+                    const error = await response.json();
+                    document.getElementById('error').textContent = error.detail || 'Error assigning template';
+                }
+            } catch (err) {
+                document.getElementById('error').textContent = 'Network error: ' + err.message;
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('nodeId').value = '';
+            document.getElementById('nodeTitle').value = '';
+            document.getElementById('chapterId').value = '';
+        }
+
+        async function loadTemplates() {
+            try {
+                const response = await fetch(`${API_BASE}/templates`);
+                const data = await response.json();
+                displayTemplateButtons(data.templates);
+            } catch (err) {
+                console.error('Error loading templates:', err);
+            }
+        }
+
+        function displayTemplateButtons(templates) {
+            const container = document.getElementById('templateButtons');
+            templates.forEach(template => {
+                const button = document.createElement('button');
+                button.className = 'template-btn';
+                button.textContent = template.name;
+                button.title = template.description;
+                button.onclick = () => selectTemplate(template);
+                container.appendChild(button);
+            });
+        }
+
+        function selectTemplate(template) {
+            selectedTemplate = template;
+            document.getElementById('selectedTemplate').textContent = template.name;
+
+            // Update button styles
+            document.querySelectorAll('.template-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            event.target.classList.add('selected');
+        }
+
+        function updateNodeTemplate(nodeId, templateId) {
+            const nodeElement = document.getElementById(`node-${nodeId}`);
+            if (nodeElement) {
+                // Find and update the template info span
+                const templateSpan = nodeElement.querySelector('span[style*="color"]');
+                if (templateSpan) {
+                    templateSpan.innerHTML = `<span style="color: #28a745; font-weight: bold;">[${templateId}]</span>`;
+                    templateSpan.style.color = '#28a745';
+                    templateSpan.style.fontWeight = 'bold';
+                }
+            }
+        }
+
+        // Content form functions
+        function showContentForm(nodeId) {
+            document.getElementById('content-section').style.display = 'block';
+            document.getElementById('content-node-id').textContent = nodeId;
+            loadExistingContent(nodeId);
+        }
+
+        async function loadExistingContent(nodeId) {
+            try {
+                const response = await fetch(`${API_BASE}/nodes/${nodeId}/content`);
+                if (response.ok) {
+                    const content = await response.json();
+                    document.getElementById('explanation').value = content.explanation || '';
+                    document.getElementById('real-world-example').value = content.real_world_example || '';
+                    document.getElementById('textbook-content').value = content.textbook_content || '';
+                    document.getElementById('memory-trick').value = content.memory_trick || '';
+                }
+            } catch (error) {
+                console.log('No existing content found');
+            }
+        }
+
+        // Content form submission
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('content-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const nodeId = document.getElementById('content-node-id').textContent;
+                const content = {
+                    explanation: document.getElementById('explanation').value,
+                    real_world_example: document.getElementById('real-world-example').value,
+                    textbook_content: document.getElementById('textbook-content').value,
+                    memory_trick: document.getElementById('memory-trick').value
+                };
+
+                try {
+                    const response = await fetch(`${API_BASE}/nodes/${nodeId}/content`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(content)
+                    });
+
+                    if (response.ok) {
+                        document.getElementById('content-status').innerHTML =
+                            '<span style="color: green;">✅ Content saved successfully!</span>';
+                    } else {
+                        throw new Error('Failed to save content');
+                    }
+                } catch (error) {
+                    document.getElementById('content-status').innerHTML =
+                        '<span style="color: red;">❌ Error saving content</span>';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
