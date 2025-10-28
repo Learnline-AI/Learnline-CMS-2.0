@@ -9,7 +9,7 @@ import logging
 import json
 import asyncio
 from dotenv import load_dotenv
-import google.generativeai as genai
+from anthropic import Anthropic
 try:
     from pdf_extractor import PDFProcessor
     PDF_PROCESSOR_AVAILABLE = True
@@ -43,14 +43,15 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize Gemini API
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    GEMINI_AVAILABLE = True
+# Initialize Claude API
+CLAUDE_API_KEY = os.getenv('ANTHROPIC_API_KEY')
+if CLAUDE_API_KEY:
+    claude_client = Anthropic(api_key=CLAUDE_API_KEY)
+    CLAUDE_AVAILABLE = True
 else:
-    GEMINI_AVAILABLE = False
-    logger.warning("Gemini API key not found - SVG generation will be in demo mode")
+    claude_client = None
+    CLAUDE_AVAILABLE = False
+    print("Warning: ANTHROPIC_API_KEY not found. Claude features will be disabled.")
 
 app = FastAPI(
     title="Educational CMS PDF Processor",
@@ -695,7 +696,7 @@ async def render_template_endpoint(request: TemplateRenderRequest):
 @app.post("/api/generate-svgs")
 async def generate_svgs(request: GenerateSVGsRequest):
     """
-    Generate 3 clean SVG codes using Gemini AI based on context, titles, and descriptions
+    Generate 3 clean SVG codes using Claude AI based on context, titles, and descriptions
     Returns array of 3 SVG code strings
     """
     try:
@@ -703,9 +704,9 @@ async def generate_svgs(request: GenerateSVGsRequest):
         if len(request.titles) != 3 or len(request.descriptions) != 3:
             raise HTTPException(status_code=400, detail="Must provide exactly 3 titles and 3 descriptions")
 
-        if not GEMINI_AVAILABLE:
+        if not CLAUDE_AVAILABLE:
             # Demo mode - return sample SVGs
-            logger.info("Gemini not available - returning demo SVGs")
+            logger.info("Claude not available - returning demo SVGs")
             demo_svgs = [
                 '<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><circle cx="100" cy="100" r="80" fill="#6366f1"/><text x="100" y="115" font-size="48" fill="white" text-anchor="middle">1</text></svg>',
                 '<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><rect x="20" y="20" width="160" height="160" fill="#8b5cf6" rx="10"/><text x="100" y="115" font-size="48" fill="white" text-anchor="middle">2</text></svg>',
@@ -713,7 +714,7 @@ async def generate_svgs(request: GenerateSVGsRequest):
             ]
             return {"svgs": demo_svgs}
 
-        # Build prompt for Gemini
+        # Build prompt for Claude
         prompt = f"""You are an expert SVG illustrator for educational content. Generate 3 clean, minimal SVG illustrations.
 
 Context: {request.context}
@@ -740,12 +741,15 @@ Requirements:
 
 Return only the JSON, no other text."""
 
-        # Call Gemini
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(prompt)
+        # Call Claude
+        message = claude_client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=4000,
+            messages=[{"role": "user", "content": prompt}]
+        )
 
         # Parse response
-        response_text = response.text.strip()
+        response_text = message.content[0].text.strip()
 
         # Remove markdown code blocks if present
         if response_text.startswith('```'):
@@ -773,7 +777,7 @@ Return only the JSON, no other text."""
         return {"svgs": svgs}
 
     except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse Gemini response as JSON: {str(e)}")
+        logger.error(f"Failed to parse Claude response as JSON: {str(e)}")
         raise HTTPException(status_code=500, detail="AI returned invalid format")
     except Exception as e:
         logger.error(f"Error generating SVGs: {str(e)}")
