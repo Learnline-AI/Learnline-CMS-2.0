@@ -23,6 +23,33 @@ class TemplateEditorCMS {
         this.isNodePanelCollapsed = false;
         this.toggleNodePanelBtn = null;
 
+        // View mode state
+        this.viewMode = 'list'; // 'list' or 'visual'
+        this.viewModeToggleBtn = null;
+        this.visualNetworkContainer = null;
+
+        // Visual network zoom/pan state
+        this.visualScale = 1;
+        this.visualPanX = 0;
+        this.visualPanY = 0;
+        this.minScale = 0.25;
+        this.maxScale = 3;
+        this.scaleStep = 0.2;
+        this.wheelScaleStep = 0.04; // 20% sensitivity for wheel zoom
+        this.isPanning = false;
+        this.lastPanX = 0;
+        this.lastPanY = 0;
+        this.positioningMode = false;
+
+        // Keyboard state tracking
+        this.isSpacePressed = false;
+        this.isAltPressed = false;
+        this.arrowUpdateTimeout = null;
+
+        // Visual network nodes
+        this.visualNodes = new Map(); // nodeId -> VisualNode instance
+        this.nodeConnections = new Map(); // nodeId -> array of connected nodeIds
+
         // Session and Auto-Save state
         this.sessionId = null;
         this.autoSaveTimeout = null;
@@ -32,14 +59,22 @@ class TemplateEditorCMS {
         this.initializeElements();
         this.bindEvents();
         this.initializeTextFormatting();
-        this.initializeSession();
         this.updatePreview();
+
+        // Initialize session asynchronously
+        this.initializeSession().then(() => {
+            console.log('Session initialization completed');
+        }).catch(error => {
+            console.error('Session initialization failed:', error);
+        });
     }
 
     initializeElements() {
         // Node navigation elements
         this.nodeList = document.getElementById('node-list');
         this.addNodeBtn = document.getElementById('add-node-btn');
+        this.importCsvBtn = document.getElementById('import-csv-btn');
+        this.csvFileInput = document.getElementById('csv-file-input');
 
         // Template editor elements
         this.editorCanvas = document.getElementById('editor-canvas');
@@ -78,6 +113,18 @@ class TemplateEditorCMS {
         // Toggle panel button
         this.toggleNodePanelBtn = document.getElementById('toggle-nodes-btn');
 
+        // View mode toggle elements
+        this.viewModeToggleBtn = document.getElementById('view-mode-toggle-btn');
+        this.visualNetworkContainer = document.getElementById('visual-network-container');
+
+        // Visual network elements
+        this.visualNetworkSvg = document.getElementById('visual-network-svg');
+        this.networkContent = document.getElementById('network-content');
+        this.zoomInBtn = document.getElementById('zoom-in-btn');
+        this.zoomOutBtn = document.getElementById('zoom-out-btn');
+        this.resetViewBtn = document.getElementById('reset-view-btn');
+        this.positionModeBtn = document.getElementById('position-mode-btn');
+
         // Selection tracking
         this.selectedComponent = null;
         this.hasTextSelection = false;
@@ -87,6 +134,10 @@ class TemplateEditorCMS {
         // Node navigation events
         this.addNodeBtn.addEventListener('click', () => this.addNewNode());
         this.nodeList.addEventListener('click', (e) => this.handleNodeClick(e));
+
+        // CSV import events
+        this.importCsvBtn.addEventListener('click', () => this.openCsvFileDialog());
+        this.csvFileInput.addEventListener('change', (e) => this.handleCsvFileSelection(e));
 
         // Component drag and drop events
         this.componentItems.forEach(item => {
@@ -131,8 +182,45 @@ class TemplateEditorCMS {
             this.toggleNodePanelBtn.addEventListener('click', () => this.toggleNodePanel());
         }
 
+        // View mode toggle events
+        if (this.viewModeToggleBtn) {
+            this.viewModeToggleBtn.addEventListener('click', () => this.toggleViewMode());
+        }
+
+        // Visual network control events
+        if (this.zoomInBtn) {
+            this.zoomInBtn.addEventListener('click', () => this.zoomIn());
+        }
+        if (this.zoomOutBtn) {
+            this.zoomOutBtn.addEventListener('click', () => this.zoomOut());
+        }
+        if (this.resetViewBtn) {
+            this.resetViewBtn.addEventListener('click', () => this.resetView());
+        }
+        if (this.positionModeBtn) {
+            this.positionModeBtn.addEventListener('click', () => this.togglePositioningMode());
+        }
+
+        // Visual network pan events
+        if (this.visualNetworkSvg) {
+            this.visualNetworkSvg.addEventListener('mousedown', (e) => this.startPan(e));
+            this.visualNetworkSvg.addEventListener('mousemove', (e) => this.handlePan(e));
+            this.visualNetworkSvg.addEventListener('mouseup', () => this.endPan());
+            this.visualNetworkSvg.addEventListener('mouseleave', () => this.endPan());
+
+            // Ctrl+scroll zoom events
+            this.visualNetworkSvg.addEventListener('wheel', (e) => this.handleWheelZoom(e));
+        }
+
+        // Add global keyboard event listeners
+        document.addEventListener('keydown', (e) => this.handleKeyDown(e));
+        document.addEventListener('keyup', (e) => this.handleKeyUp(e));
+
         // Restore collapsed state from localStorage
         this.restoreNodePanelState();
+
+        // Restore view mode state from localStorage
+        this.restoreViewModeState();
     }
 
     // Node Navigation Methods
@@ -154,6 +242,11 @@ class TemplateEditorCMS {
 
         this.nodeList.appendChild(nodeItem);
         this.selectNode(nodeId);
+
+        // Update visual network if in visual mode
+        if (this.viewMode === 'visual') {
+            this.initializeVisualNetwork();
+        }
     }
 
     handleNodeClick(e) {
@@ -175,8 +268,19 @@ class TemplateEditorCMS {
         if (selectedNodeItem) {
             selectedNodeItem.classList.add('active');
             this.selectedNode = nodeId;
+
+            // Update visual node selection
+            this.updateVisualNodeSelection(nodeId);
+
             this.loadNodeContent(nodeId);
         }
+    }
+
+    updateVisualNodeSelection(selectedNodeId) {
+        // Update visual node selection states
+        this.visualNodes.forEach((visualNode, nodeId) => {
+            visualNode.setSelected(nodeId === selectedNodeId);
+        });
     }
 
     async loadNodeContent(nodeId) {
@@ -454,6 +558,87 @@ class TemplateEditorCMS {
                         </div>
                     </div>
                 `;
+                break;
+            case 'three-svgs':
+                div.innerHTML = `
+                    <div class="component-header">
+                        <h4>Three SVGs</h4>
+                        <button class="remove-component">×</button>
+                    </div>
+                    <div class="three-svgs-grid">
+                        <div class="svg-slot" data-slot="1">
+                            <div class="svg-preview-area">
+                                <div class="svg-preview" data-slot="1">
+                                    <p>No SVG yet</p>
+                                </div>
+                            </div>
+                            <div contenteditable="true" data-placeholder="SVG title..." class="svg-title component-input" data-slot="1"></div>
+                            <div contenteditable="true" data-placeholder="SVG description..." class="svg-description component-input component-textarea" data-slot="1"></div>
+                        </div>
+                        <div class="svg-slot" data-slot="2">
+                            <div class="svg-preview-area">
+                                <div class="svg-preview" data-slot="2">
+                                    <p>No SVG yet</p>
+                                </div>
+                            </div>
+                            <div contenteditable="true" data-placeholder="SVG title..." class="svg-title component-input" data-slot="2"></div>
+                            <div contenteditable="true" data-placeholder="SVG description..." class="svg-description component-input component-textarea" data-slot="2"></div>
+                        </div>
+                        <div class="svg-slot" data-slot="3">
+                            <div class="svg-preview-area">
+                                <div class="svg-preview" data-slot="3">
+                                    <p>No SVG yet</p>
+                                </div>
+                            </div>
+                            <div contenteditable="true" data-placeholder="SVG title..." class="svg-title component-input" data-slot="3"></div>
+                            <div contenteditable="true" data-placeholder="SVG description..." class="svg-description component-input component-textarea" data-slot="3"></div>
+                        </div>
+                    </div>
+                    <div class="svg-generation-controls">
+                        <input type="text" class="svg-context-input" placeholder="Add context for SVG generation...">
+                        <button class="generate-svgs-btn">Generate SVGs</button>
+                    </div>
+                `;
+
+                const generateBtn = div.querySelector('.generate-svgs-btn');
+                generateBtn.addEventListener('click', async () => {
+                    const titles = [];
+                    const descriptions = [];
+                    const context = div.querySelector('.svg-context-input').value;
+
+                    for (let i = 1; i <= 3; i++) {
+                        const title = div.querySelector(`.svg-title[data-slot="${i}"]`).innerHTML || '';
+                        const desc = div.querySelector(`.svg-description[data-slot="${i}"]`).innerHTML || '';
+                        titles.push(title);
+                        descriptions.push(desc);
+                    }
+
+                    generateBtn.disabled = true;
+                    generateBtn.textContent = 'Generating...';
+
+                    try {
+                        const response = await fetch('http://localhost:8000/api/generate-svgs', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ context, titles, descriptions })
+                        });
+                        const data = await response.json();
+
+                        for (let i = 1; i <= 3; i++) {
+                            const svgPreview = div.querySelector(`.svg-preview[data-slot="${i}"]`);
+                            svgPreview.innerHTML = data.svgs[i-1];
+                            svgPreview.dataset.svgCode = data.svgs[i-1];
+                        }
+
+                        this.updatePreview();
+                        this.scheduleAutoSave();
+                    } catch (error) {
+                        alert('Failed to generate SVGs: ' + error.message);
+                    } finally {
+                        generateBtn.disabled = false;
+                        generateBtn.textContent = 'Generate SVGs';
+                    }
+                });
                 break;
             case 'two-pictures':
                 div.innerHTML = `
@@ -890,6 +1075,21 @@ class TemplateEditorCMS {
                         if (titleInput && imageData.title) titleInput.innerHTML = imageData.title;
                         if (bodyInput && imageData.body) bodyInput.innerHTML = imageData.body;
                     });
+                }
+                break;
+
+            case 'three-svgs':
+                for (let i = 1; i <= 3; i++) {
+                    const titleInput = componentElement.querySelector(`.svg-title[data-slot="${i}"]`);
+                    const descInput = componentElement.querySelector(`.svg-description[data-slot="${i}"]`);
+                    const svgPreview = componentElement.querySelector(`.svg-preview[data-slot="${i}"]`);
+
+                    if (titleInput && data[`title${i}`]) titleInput.innerHTML = data[`title${i}`];
+                    if (descInput && data[`description${i}`]) descInput.innerHTML = data[`description${i}`];
+                    if (svgPreview && data[`svg${i}`]) {
+                        svgPreview.innerHTML = data[`svg${i}`];
+                        svgPreview.dataset.svgCode = data[`svg${i}`];
+                    }
                 }
                 break;
 
@@ -1794,6 +1994,30 @@ class TemplateEditorCMS {
                 threePicturesHTML += '</div>';
                 return threePicturesHTML;
 
+            case 'three-svgs':
+                let threeSVGsHTML = '<div class="preview-three-svgs">';
+                for (let i = 1; i <= 3; i++) {
+                    const titleInput = component.querySelector(`.svg-title[data-slot="${i}"]`);
+                    const descInput = component.querySelector(`.svg-description[data-slot="${i}"]`);
+                    const svgPreview = component.querySelector(`.svg-preview[data-slot="${i}"]`);
+
+                    const title = titleInput ? titleInput.innerHTML || `SVG ${i} Title` : `SVG ${i} Title`;
+                    const desc = descInput ? descInput.innerHTML || `SVG ${i} description` : `SVG ${i} description`;
+                    const svgCode = svgPreview ? svgPreview.dataset.svgCode || '' : '';
+
+                    threeSVGsHTML += `
+                        <div class="preview-svg-item">
+                            <div class="preview-svg-container">
+                                ${svgCode ? svgCode : '<p class="no-svg-placeholder">No SVG generated</p>'}
+                            </div>
+                            <h4 class="preview-svg-title">${this.formatTextForPreview(title)}</h4>
+                            <p class="preview-svg-description">${this.formatTextForPreview(desc)}</p>
+                        </div>
+                    `;
+                }
+                threeSVGsHTML += '</div>';
+                return threeSVGsHTML;
+
             case 'two-pictures':
                 let twoPicturesHTML = '<div class="preview-two-pictures">';
                 for (let i = 1; i <= 2; i++) {
@@ -2130,6 +2354,17 @@ class TemplateEditorCMS {
                     };
                 }
                 break;
+            case 'three-svgs':
+                for (let i = 1; i <= 3; i++) {
+                    const titleInput = component.querySelector(`.svg-title[data-slot="${i}"]`);
+                    const descInput = component.querySelector(`.svg-description[data-slot="${i}"]`);
+                    const svgPreview = component.querySelector(`.svg-preview[data-slot="${i}"]`);
+
+                    data[`title${i}`] = titleInput ? titleInput.innerHTML : '';
+                    data[`description${i}`] = descInput ? descInput.innerHTML : '';
+                    data[`svg${i}`] = svgPreview ? svgPreview.dataset.svgCode || '' : '';
+                }
+                break;
             case 'two-pictures':
                 data.pictures = {};
                 for (let i = 1; i <= 2; i++) {
@@ -2189,6 +2424,1044 @@ class TemplateEditorCMS {
             }
         }
     }
+
+    // View Mode Management Methods
+    toggleViewMode() {
+        // Toggle state
+        this.viewMode = this.viewMode === 'list' ? 'visual' : 'list';
+
+        // Update the UI
+        this.updateViewMode();
+
+        // Save state to localStorage
+        localStorage.setItem('viewMode', this.viewMode);
+
+        console.log(`View mode switched to: ${this.viewMode}`);
+    }
+
+    updateViewMode() {
+        const editorLayout = document.querySelector('.editor-layout');
+        const nodeList = document.getElementById('node-list');
+
+        if (this.viewMode === 'visual') {
+            // Switch to visual mode
+            editorLayout.classList.add('visual-mode');
+            nodeList.style.display = 'none';
+            this.visualNetworkContainer.style.display = 'flex';
+
+            // Initialize visual network with current data
+            this.initializeVisualNetwork();
+
+            // Update button appearance
+            this.viewModeToggleBtn.innerHTML = '<i class="fas fa-list"></i>';
+            this.viewModeToggleBtn.title = 'Switch to list view';
+            this.viewModeToggleBtn.classList.add('active');
+        } else {
+            // Switch to list mode
+            editorLayout.classList.remove('visual-mode');
+            nodeList.style.display = 'block';
+            this.visualNetworkContainer.style.display = 'none';
+
+            // Update button appearance
+            this.viewModeToggleBtn.innerHTML = '<i class="fas fa-project-diagram"></i>';
+            this.viewModeToggleBtn.title = 'Switch to visual view';
+            this.viewModeToggleBtn.classList.remove('active');
+        }
+    }
+
+    restoreViewModeState() {
+        // Check localStorage for saved view mode state
+        const savedViewMode = localStorage.getItem('viewMode');
+
+        if (savedViewMode && savedViewMode === 'visual') {
+            this.viewMode = 'visual';
+            this.updateViewMode();
+        }
+    }
+
+    // Visual Network Zoom/Pan Methods
+    zoomIn() {
+        if (this.visualScale < this.maxScale) {
+            this.visualScale = Math.min(this.visualScale + this.scaleStep, this.maxScale);
+            this.updateVisualTransform();
+        }
+    }
+
+    zoomOut() {
+        if (this.visualScale > this.minScale) {
+            this.visualScale = Math.max(this.visualScale - this.scaleStep, this.minScale);
+            this.updateVisualTransform();
+        }
+    }
+
+    resetView() {
+        this.visualScale = 1;
+        this.visualPanX = 0;
+        this.visualPanY = 0;
+        this.updateVisualTransform();
+    }
+
+    togglePositioningMode() {
+        this.positioningMode = !this.positioningMode;
+
+        // Update button visual state
+        if (this.positionModeBtn) {
+            this.positionModeBtn.classList.toggle('active', this.positioningMode);
+        }
+
+        // Update SVG cursor
+        if (this.visualNetworkSvg) {
+            this.visualNetworkSvg.style.cursor = this.positioningMode ? 'default' : 'grab';
+        }
+
+        console.log('Positioning mode:', this.positioningMode ? 'ON' : 'OFF');
+    }
+
+    startPan(e) {
+        // Allow panning with: Space+drag, middle click, or left click in normal mode
+        const isSpacePan = this.isSpacePressed && e.button === 0;
+        const isMiddleClick = e.button === 1;
+        const isLeftClickInNormalMode = e.button === 0 && !this.positioningMode && !this.isSpacePressed;
+
+        if (!isSpacePan && !isMiddleClick && !isLeftClickInNormalMode) return;
+
+        this.isPanning = true;
+        this.lastPanX = e.clientX;
+        this.lastPanY = e.clientY;
+
+        // Disable transitions during dragging for smooth movement
+        if (this.networkContent) {
+            this.networkContent.style.transition = 'none';
+        }
+
+        if (this.visualNetworkSvg) {
+            this.visualNetworkSvg.style.cursor = 'grabbing';
+        }
+        e.preventDefault();
+    }
+
+    handlePan(e) {
+        if (!this.isPanning) return;
+
+        const deltaX = e.clientX - this.lastPanX;
+        const deltaY = e.clientY - this.lastPanY;
+
+        this.visualPanX += deltaX;
+        this.visualPanY += deltaY;
+
+        this.lastPanX = e.clientX;
+        this.lastPanY = e.clientY;
+
+        this.updateVisualTransform();
+        e.preventDefault();
+    }
+
+    endPan() {
+        this.isPanning = false;
+
+        // Re-enable transitions after dragging ends
+        if (this.networkContent) {
+            this.networkContent.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
+        }
+
+        if (this.visualNetworkSvg) {
+            this.visualNetworkSvg.style.cursor = 'grab';
+        }
+    }
+
+    updateVisualTransform() {
+        if (this.networkContent) {
+            this.networkContent.setAttribute(
+                'transform',
+                `translate(${this.visualPanX}, ${this.visualPanY}) scale(${this.visualScale})`
+            );
+        }
+    }
+
+    handleWheelZoom(e) {
+        // Only zoom when Ctrl key is pressed
+        if (!e.ctrlKey) return;
+
+        // Prevent default browser zoom
+        e.preventDefault();
+
+        // Use smaller step for wheel zoom
+        if (e.deltaY < 0) {
+            // Scroll up = zoom in
+            if (this.visualScale < this.maxScale) {
+                this.visualScale = Math.min(this.visualScale + this.wheelScaleStep, this.maxScale);
+                this.updateVisualTransform();
+            }
+        } else {
+            // Scroll down = zoom out
+            if (this.visualScale > this.minScale) {
+                this.visualScale = Math.max(this.visualScale - this.wheelScaleStep, this.minScale);
+                this.updateVisualTransform();
+            }
+        }
+    }
+
+    // Keyboard event handlers
+    handleKeyDown(e) {
+        if (e.code === 'Space') {
+            this.isSpacePressed = true;
+            // Prevent page scroll when space is pressed
+            e.preventDefault();
+        }
+        if (e.code === 'AltLeft' || e.code === 'AltRight') {
+            this.isAltPressed = true;
+        }
+    }
+
+    handleKeyUp(e) {
+        if (e.code === 'Space') {
+            this.isSpacePressed = false;
+        }
+        if (e.code === 'AltLeft' || e.code === 'AltRight') {
+            this.isAltPressed = false;
+        }
+    }
+
+    // Grid positioning algorithm
+    calculateGridPosition(index, totalNodes) {
+        const gridSize = Math.ceil(Math.sqrt(totalNodes));
+        const spacing = 100; // pixels between nodes
+        const offsetX = 50; // starting offset
+        const offsetY = 50;
+
+        const row = Math.floor(index / gridSize);
+        const col = index % gridSize;
+
+        // Add slight randomness for organic feel
+        const randomX = (Math.random() - 0.5) * 20;
+        const randomY = (Math.random() - 0.5) * 20;
+
+        return {
+            x: offsetX + col * spacing + randomX,
+            y: offsetY + row * spacing + randomY
+        };
+    }
+
+    // Initialize visual network
+    initializeVisualNetwork() {
+        if (!this.networkContent) return;
+
+        // Clear existing nodes
+        this.clearVisualNetwork();
+
+        // Get node data from existing list
+        const nodeElements = document.querySelectorAll('.node-item');
+        const nodeData = [];
+
+        console.log(`Found ${nodeElements.length} nodes for visual network`);
+
+        nodeElements.forEach((element, index) => {
+            const nodeId = element.getAttribute('data-node-id');
+            const titleElement = element.querySelector('.node-title');
+            const statusElement = element.querySelector('.node-status');
+
+            const title = titleElement ? titleElement.textContent : nodeId;
+            const status = this.getNodeStatus(element);
+
+            // Extract metadata from DOM attributes
+            const nodeType = element.getAttribute('data-node-type') || 'core';
+            const difficulty = element.getAttribute('data-difficulty') ? parseInt(element.getAttribute('data-difficulty')) : null;
+            const timeMinutes = element.getAttribute('data-time-minutes') ? parseInt(element.getAttribute('data-time-minutes')) : null;
+            const description = element.getAttribute('data-description') || '';
+            const textbookPages = element.getAttribute('data-textbook-pages') || '';
+
+            console.log(`Node ${nodeId}: title="${title}", status="${status}", type="${nodeType}"`);
+            nodeData.push({
+                nodeId,
+                title,
+                status,
+                type: nodeType,
+                difficulty,
+                timeMinutes,
+                description,
+                textbookPages
+            });
+        });
+
+        // Create visual nodes
+        nodeData.forEach((data, index) => {
+            const position = this.calculateGridPosition(index, nodeData.length);
+            const visualNode = new this.VisualNode(data, position, this);
+
+            this.visualNodes.set(data.nodeId, visualNode);
+            this.networkContent.appendChild(visualNode.elements.group);
+        });
+
+        // Set up connections based on available data
+        this.setupConnections(nodeData);
+    }
+
+    getStatusFromClass(className) {
+        if (className.includes('complete')) return 'complete';
+        if (className.includes('draft')) return 'draft';
+        return 'empty';
+    }
+
+    // Enhanced status detection that checks the actual DOM structure
+    getNodeStatus(element) {
+        // Check .node-status element class
+        const statusElement = element.querySelector('.node-status');
+        if (statusElement) {
+            const statusFromClass = this.getStatusFromClass(statusElement.className);
+            if (statusFromClass !== 'empty') {
+                return statusFromClass;
+            }
+        }
+
+        // Check if node has active class (might indicate draft status like N001)
+        if (element.classList.contains('active')) {
+            return 'draft';
+        }
+
+        // Check for any status indicators in the element
+        const indicators = element.querySelectorAll('.node-indicator, .status-indicator');
+        for (let indicator of indicators) {
+            if (indicator.style.backgroundColor || indicator.className.includes('draft') || indicator.className.includes('complete')) {
+                // If there's any visual indicator, assume it's draft
+                return 'draft';
+            }
+        }
+
+        return 'empty';
+    }
+
+    clearVisualNetwork() {
+        // Remove all visual nodes
+        this.visualNodes.forEach(node => node.remove());
+        this.visualNodes.clear();
+
+        // Clear connections
+        const connections = this.networkContent.querySelectorAll('.node-connection');
+        connections.forEach(connection => connection.remove());
+    }
+
+    setupBasicConnections(nodeData) {
+        // Simple sequential connections: N001 -> N002 -> N003, etc.
+        for (let i = 0; i < nodeData.length - 1; i++) {
+            const fromNode = this.visualNodes.get(nodeData[i].nodeId);
+            const toNode = this.visualNodes.get(nodeData[i + 1].nodeId);
+
+            if (fromNode && toNode) {
+                this.createConnection(fromNode, toNode);
+            }
+        }
+    }
+
+    setupConnections(nodeData) {
+        console.log('=== SETUP CONNECTIONS DEBUGGING ===');
+        console.log(`Visual nodes in network: ${this.visualNodes.size}`);
+        console.log(`Relationships available: ${this.relationships ? this.relationships.length : 'NONE'}`);
+        console.log(`Node data provided: ${nodeData.length} nodes`);
+
+        // Reset all nodes to baseline size first
+        this.resetAllNodeScaling();
+
+        if (this.relationships && this.relationships.length > 0) {
+            console.log(`✅ USING RELATIONSHIP CONNECTIONS (${this.relationships.length} relationships)`);
+            console.log('Relationship summary:');
+            this.relationships.forEach((rel, index) => {
+                console.log(`  ${index + 1}. ${rel.from} --[${rel.type}]--> ${rel.to}`);
+            });
+            this.setupRelationshipConnections();
+        } else {
+            console.log('❌ NO RELATIONSHIPS - Using sequential connections');
+            if (!this.relationships) {
+                console.log('  Issue: this.relationships is null/undefined');
+            } else if (this.relationships.length === 0) {
+                console.log('  Issue: this.relationships array is empty');
+            }
+            this.setupBasicConnections(nodeData);
+        }
+        console.log('=== END SETUP CONNECTIONS ===');
+    }
+
+    // Reset all nodes to their proper baseline size
+    resetAllNodeScaling() {
+        this.visualNodes.forEach(node => {
+            node.scaleShape(1); // Reset to baseline
+        });
+    }
+
+    // Calculate edge-to-edge connection points for better arrow rendering
+    calculateConnectionPoints(fromNode, toNode) {
+        const fromCenter = { x: fromNode.position.x, y: fromNode.position.y };
+        const toCenter = { x: toNode.position.x, y: toNode.position.y };
+
+        // Calculate angle between nodes
+        const dx = toCenter.x - fromCenter.x;
+        const dy = toCenter.y - fromCenter.y;
+        const angle = Math.atan2(dy, dx);
+
+        // Calculate exit point from source node boundary
+        const fromPoint = this.getNodeBoundaryPoint(fromNode, angle);
+
+        // Calculate entry point to target node boundary (opposite direction)
+        const toPoint = this.getNodeBoundaryPoint(toNode, angle + Math.PI);
+
+        return { from: fromPoint, to: toPoint };
+    }
+
+    getNodeBoundaryPoint(node, angle) {
+        const centerX = node.position.x;
+        const centerY = node.position.y;
+        const nodeRadius = 20; // Standard node radius
+
+        // Determine if it's a circle or diamond node
+        const isCircle = node.type === 'core' || node.type === 'support';
+
+        if (isCircle) {
+            // For circular nodes, calculate point on circle
+            return {
+                x: centerX + nodeRadius * Math.cos(angle),
+                y: centerY + nodeRadius * Math.sin(angle)
+            };
+        } else {
+            // For diamond nodes, calculate intersection with diamond boundary
+            const size = nodeRadius;
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            // Diamond boundary intersection calculation
+            const absX = Math.abs(cos);
+            const absY = Math.abs(sin);
+
+            let boundaryX, boundaryY;
+
+            if (absX * size >= absY * size) {
+                // Intersect with left/right sides
+                boundaryX = centerX + (cos > 0 ? size : -size);
+                boundaryY = centerY + sin * size / absX;
+            } else {
+                // Intersect with top/bottom sides
+                boundaryX = centerX + cos * size / absY;
+                boundaryY = centerY + (sin > 0 ? size : -size);
+            }
+
+            return { x: boundaryX, y: boundaryY };
+        }
+    }
+
+    // Create smart path that avoids node collisions with simple perpendicular offset
+    createSmartPath(fromPoint, toPoint, fromNodeId, toNodeId) {
+        const x1 = fromPoint.x;
+        const y1 = fromPoint.y;
+        const x2 = toPoint.x;
+        const y2 = toPoint.y;
+
+        // Check if direct path passes near any other nodes
+        const midX = (x1 + x2) / 2;
+        const midY = (y1 + y2) / 2;
+
+        const hasCollision = Array.from(this.visualNodes.values()).some(node => {
+            // Skip the source and target nodes
+            if (node.nodeId === fromNodeId || node.nodeId === toNodeId) return false;
+
+            const dx = node.position.x - midX;
+            const dy = node.position.y - midY;
+            return Math.sqrt(dx * dx + dy * dy) < 35; // 35px collision threshold
+        });
+
+        if (!hasCollision) {
+            // Straight line path
+            return `M ${x1},${y1} L ${x2},${y2}`;
+        }
+
+        // Add gentle perpendicular offset to avoid collision
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const offsetDistance = 50; // How far to bend the arrow
+        const offsetX = midX + Math.sin(angle) * offsetDistance;
+        const offsetY = midY - Math.cos(angle) * offsetDistance;
+
+        // Create curved path using quadratic bezier
+        return `M ${x1},${y1} Q ${offsetX},${offsetY} ${x2},${y2}`;
+    }
+
+    setupRelationshipConnections() {
+        console.log('=== RELATIONSHIP CONNECTION DEBUGGING ===');
+        console.log(`Total relationships to process: ${this.relationships.length}`);
+        console.log('Available visual nodes:', Array.from(this.visualNodes.keys()));
+
+        const relationshipStyles = {
+            'LEADS_TO': { stroke: '#007AFF', strokeWidth: 2, marker: 'arrow-leads-to' },
+            'prerequisite': { stroke: '#FF6B6B', strokeWidth: 1.5, marker: 'arrow-prerequisite' },
+            'PREREQUISITE_FOR': { stroke: '#FF6B6B', strokeWidth: 1.5, marker: 'arrow-prerequisite' },
+            'enrichment': { stroke: '#51CF66', strokeWidth: 1, marker: 'arrow-enrichment' }
+        };
+
+        let successfulConnections = 0;
+        let failedConnections = 0;
+
+        this.relationships.forEach((rel, index) => {
+            console.log(`Relationship ${index + 1}: ${rel.from} --[${rel.type}]--> ${rel.to}`);
+
+            const fromNode = this.visualNodes.get(rel.from);
+            const toNode = this.visualNodes.get(rel.to);
+
+            if (fromNode && toNode) {
+                const style = relationshipStyles[rel.type] || relationshipStyles['LEADS_TO'];
+                this.createStyledConnection(fromNode, toNode, style, rel.explanation);
+                successfulConnections++;
+                console.log(`  ✅ SUCCESS: Created ${rel.type} connection`);
+            } else {
+                failedConnections++;
+                console.log(`  ❌ FAILED: Missing nodes - fromNode: ${!!fromNode}, toNode: ${!!toNode}`);
+                if (!fromNode) console.log(`    Missing fromNode for ID: "${rel.from}"`);
+                if (!toNode) console.log(`    Missing toNode for ID: "${rel.to}"`);
+            }
+        });
+
+        console.log(`=== CONNECTION SUMMARY ===`);
+        console.log(`Successful connections: ${successfulConnections}`);
+        console.log(`Failed connections: ${failedConnections}`);
+        console.log('=== END RELATIONSHIP DEBUGGING ===');
+    }
+
+    createConnection(fromNode, toNode) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('class', 'node-connection');
+
+        // Simple center-to-center path for reliable creation
+        const x1 = fromNode.position.x;
+        const y1 = fromNode.position.y;
+        const x2 = toNode.position.x;
+        const y2 = toNode.position.y;
+
+        // Create simple straight path
+        const pathData = `M ${x1},${y1} L ${x2},${y2}`;
+        path.setAttribute('d', pathData);
+        path.setAttribute('stroke', '#8E8E93');
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('opacity', '0.6');
+
+        // Add data attributes for node tracking
+        path.setAttribute('data-from', fromNode.nodeId);
+        path.setAttribute('data-to', toNode.nodeId);
+
+        // Insert before nodes so lines appear behind
+        this.networkContent.insertBefore(path, this.networkContent.firstChild);
+    }
+
+    createStyledConnection(fromNode, toNode, style, explanation) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('class', 'node-connection styled-connection');
+
+        // Calculate edge-to-edge connection points
+        const connectionPoints = this.calculateConnectionPoints(fromNode, toNode);
+
+        // Create smart path that avoids collisions
+        const pathData = this.createSmartPath(
+            connectionPoints.from,
+            connectionPoints.to,
+            fromNode.nodeId,
+            toNode.nodeId
+        );
+
+        path.setAttribute('d', pathData);
+        path.setAttribute('stroke', style.stroke);
+        path.setAttribute('stroke-width', style.strokeWidth);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('opacity', '0.7');
+
+        // Add arrowhead marker
+        if (style.marker) {
+            path.setAttribute('marker-end', `url(#${style.marker})`);
+        }
+
+        // Add data attributes for node tracking
+        path.setAttribute('data-from', fromNode.nodeId);
+        path.setAttribute('data-to', toNode.nodeId);
+
+        // Add hover tooltip if explanation exists
+        if (explanation) {
+            path.style.cursor = 'pointer';
+            path.addEventListener('mouseenter', (e) => {
+                this.showConnectionTooltip(e, explanation);
+            });
+            path.addEventListener('mouseleave', () => {
+                this.hideConnectionTooltip();
+            });
+            path.addEventListener('mousemove', (e) => {
+                this.updateConnectionTooltipPosition(e);
+            });
+        }
+
+        // Insert before nodes so paths appear behind
+        this.networkContent.insertBefore(path, this.networkContent.firstChild);
+    }
+
+
+    // Batch arrow updates for performance
+    batchUpdateConnections(nodeId) {
+        if (this.arrowUpdateTimeout) {
+            clearTimeout(this.arrowUpdateTimeout);
+        }
+
+        this.arrowUpdateTimeout = setTimeout(() => {
+            this.updateConnectionsForNode(nodeId);
+        }, 16); // ~60fps
+    }
+
+    updateConnectionsForNode(nodeId) {
+        // Find all connections involving this node and update their positions
+        const connections = this.networkContent.querySelectorAll('.node-connection');
+        const node = this.visualNodes.get(nodeId);
+
+        if (!node) return;
+
+        connections.forEach(pathElement => {
+            const fromNodeId = pathElement.getAttribute('data-from');
+            const toNodeId = pathElement.getAttribute('data-to');
+
+            // Get both nodes for boundary calculations
+            const fromNode = this.visualNodes.get(fromNodeId);
+            const toNode = this.visualNodes.get(toNodeId);
+
+            if (!fromNode || !toNode) return;
+
+            // Update connection with edge-to-edge calculations and collision avoidance
+            if (fromNodeId === nodeId || toNodeId === nodeId) {
+                const connectionPoints = this.calculateConnectionPoints(fromNode, toNode);
+                const pathData = this.createSmartPath(
+                    connectionPoints.from,
+                    connectionPoints.to,
+                    fromNodeId,
+                    toNodeId
+                );
+                pathElement.setAttribute('d', pathData);
+            }
+        });
+    }
+
+
+    showConnectionTooltip(e, explanation) {
+        if (!this.connectionTooltip) {
+            this.connectionTooltip = document.createElement('div');
+            this.connectionTooltip.style.cssText = `
+                position: fixed;
+                background: rgba(0, 0, 0, 0.9);
+                color: white;
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 12px;
+                z-index: 1000;
+                pointer-events: none;
+                max-width: 250px;
+                line-height: 1.4;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            `;
+            document.body.appendChild(this.connectionTooltip);
+        }
+
+        this.connectionTooltip.textContent = explanation;
+        this.connectionTooltip.style.display = 'block';
+        this.updateConnectionTooltipPosition(e);
+    }
+
+    updateConnectionTooltipPosition(e) {
+        if (!this.connectionTooltip) return;
+
+        let left = e.clientX + 10;
+        let top = e.clientY - 10;
+
+        // Prevent tooltip from going off screen
+        const tooltipRect = this.connectionTooltip.getBoundingClientRect();
+        if (left + tooltipRect.width > window.innerWidth) {
+            left = e.clientX - tooltipRect.width - 10;
+        }
+
+        this.connectionTooltip.style.left = left + 'px';
+        this.connectionTooltip.style.top = top + 'px';
+    }
+
+    hideConnectionTooltip() {
+        if (this.connectionTooltip) {
+            this.connectionTooltip.style.display = 'none';
+        }
+    }
+
+    // Make VisualNode available as instance property
+    VisualNode = class {
+        constructor(nodeData, position, parent) {
+            this.nodeId = nodeData.nodeId;
+            this.title = nodeData.title || nodeData.nodeId;
+            this.status = nodeData.status || 'empty';
+            this.position = position;
+            this.parent = parent;
+            this.elements = {};
+
+            // Store metadata
+            this.type = nodeData.type || 'core';
+            this.difficulty = nodeData.difficulty || null;
+            this.timeMinutes = nodeData.timeMinutes || null;
+            this.description = nodeData.description || '';
+            this.textbookPages = nodeData.textbookPages || '';
+
+            // Drag state
+            this.isDragging = false;
+            this.dragStartX = 0;
+            this.dragStartY = 0;
+
+            // Store original dimensions for consistent scaling
+            this.originalRadius = this.type === 'enrichment' ? 28 : 20;
+
+            this.createSVGElements();
+        }
+
+        createSVGElements() {
+            // Create node group
+            this.elements.group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            this.elements.group.setAttribute('class', 'visual-node');
+            this.elements.group.setAttribute('data-node-id', this.nodeId);
+
+            // Create shape (circle or diamond based on type)
+            this.elements.shape = this.createNodeShape();
+
+            // Create text
+            this.elements.text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            this.elements.text.setAttribute('x', this.position.x);
+            this.elements.text.setAttribute('y', this.position.y + 5);
+            this.elements.text.setAttribute('text-anchor', 'middle');
+            this.elements.text.setAttribute('class', 'node-text');
+            this.elements.text.setAttribute('font-size', '12');
+            this.elements.text.setAttribute('font-weight', '600');
+            this.elements.text.textContent = this.nodeId;
+
+            // Add to group
+            this.elements.group.appendChild(this.elements.shape);
+            this.elements.group.appendChild(this.elements.text);
+
+            // Add click handler
+            this.elements.group.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.parent.selectNode(this.nodeId);
+            });
+
+            // Add hover effects and tooltip
+            this.elements.group.style.cursor = 'pointer';
+            this.elements.group.addEventListener('mouseenter', (e) => {
+                this.scaleShape(1.1);
+                this.showTooltip(e);
+            });
+            this.elements.group.addEventListener('mouseleave', () => {
+                this.scaleShape(1);
+                this.hideTooltip();
+            });
+            this.elements.group.addEventListener('mousemove', (e) => {
+                this.updateTooltipPosition(e);
+            });
+
+            // Add drag handlers
+            this.elements.group.addEventListener('mousedown', (e) => this.startNodeDrag(e));
+
+            this.updateStatus();
+        }
+
+        createNodeShape() {
+            if (this.type === 'enrichment') {
+                return this.createDiamond();
+            } else if (this.type === 'support') {
+                return this.createSupportCircle();
+            } else {
+                return this.createCircle();
+            }
+        }
+
+        createCircle() {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', this.position.x);
+            circle.setAttribute('cy', this.position.y);
+            circle.setAttribute('r', '20');
+            circle.setAttribute('class', 'node-circle');
+            return circle;
+        }
+
+        createSupportCircle() {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', this.position.x);
+            circle.setAttribute('cy', this.position.y);
+            circle.setAttribute('r', '20');
+            circle.setAttribute('class', 'node-circle node-support');
+            return circle;
+        }
+
+        createDiamond() {
+            const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            const size = 20;
+            const x = this.position.x;
+            const y = this.position.y;
+
+            const points = [
+                `${x},${y-size}`,      // Top
+                `${x+size},${y}`,      // Right
+                `${x},${y+size}`,      // Bottom
+                `${x-size},${y}`       // Left
+            ].join(' ');
+
+            polygon.setAttribute('points', points);
+            polygon.setAttribute('class', 'node-diamond');
+            return polygon;
+        }
+
+        getNodeColor(type, status) {
+            const colorMatrix = {
+                core: {
+                    empty: '#C7C7CC',
+                    draft: '#FF9500',
+                    complete: '#34C759'
+                },
+                support: {
+                    empty: '#A0C4FF',
+                    draft: '#007AFF',
+                    complete: '#0056CC'
+                },
+                enrichment: {
+                    empty: '#A8E6A0',
+                    draft: '#32D74B',
+                    complete: '#2B8A3E'
+                }
+            };
+
+            return colorMatrix[type]?.[status] || colorMatrix.core.empty;
+        }
+
+        updateStatus() {
+            const color = this.getNodeColor(this.type, this.status);
+            this.elements.shape.setAttribute('fill', color);
+        }
+
+        setSelected(selected) {
+            if (selected) {
+                this.elements.shape.setAttribute('stroke', '#007AFF');
+                this.elements.shape.setAttribute('stroke-width', '3');
+            } else {
+                this.elements.shape.removeAttribute('stroke');
+                this.elements.shape.removeAttribute('stroke-width');
+            }
+        }
+
+        scaleShape(scaleFactor) {
+            if (this.elements.shape.tagName === 'circle') {
+                // For circles, always scale from original radius to prevent accumulation
+                const newRadius = this.originalRadius * scaleFactor;
+                this.elements.shape.setAttribute('r', newRadius);
+            } else if (this.elements.shape.tagName === 'polygon') {
+                // For polygons, use transform scale
+                if (scaleFactor === 1) {
+                    this.elements.shape.removeAttribute('transform');
+                } else {
+                    const x = this.position.x;
+                    const y = this.position.y;
+                    this.elements.shape.setAttribute('transform', `scale(${scaleFactor}) translate(${x * (1 - scaleFactor)}, ${y * (1 - scaleFactor)})`);
+                }
+            }
+        }
+
+        showTooltip(e) {
+            // Create tooltip if it doesn't exist
+            if (!this.tooltip) {
+                this.tooltip = document.createElement('div');
+                this.tooltip.className = 'node-tooltip';
+                this.tooltip.style.cssText = `
+                    position: fixed;
+                    background: rgba(0, 0, 0, 0.9);
+                    color: white;
+                    padding: 8px 12px;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    font-weight: 500;
+                    z-index: 1000;
+                    pointer-events: none;
+                    max-width: 300px;
+                    line-height: 1.4;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                `;
+                document.body.appendChild(this.tooltip);
+            }
+
+            // Build tooltip content
+            const parts = [];
+            parts.push(`<strong>${this.nodeId}</strong> (${this.type})`);
+
+            if (this.difficulty !== null) {
+                parts.push(`Difficulty: ${this.difficulty}`);
+            }
+
+            if (this.timeMinutes !== null && this.timeMinutes > 0) {
+                parts.push(`Time: ${this.timeMinutes} min`);
+            }
+
+            if (this.textbookPages) {
+                parts.push(`Pages: ${this.textbookPages}`);
+            }
+
+            if (this.description && this.description.length > 0) {
+                const shortDesc = this.description.length > 120
+                    ? this.description.substring(0, 120) + '...'
+                    : this.description;
+                parts.push(`<div style="margin-top: 4px; opacity: 0.9;">${shortDesc}</div>`);
+            }
+
+            this.tooltip.innerHTML = parts.join('<br>');
+            this.tooltip.style.display = 'block';
+            this.updateTooltipPosition(e);
+        }
+
+        updateTooltipPosition(e) {
+            if (!this.tooltip) return;
+
+            const tooltipRect = this.tooltip.getBoundingClientRect();
+            let left = e.clientX + 10;
+            let top = e.clientY - 10;
+
+            // Prevent tooltip from going off screen
+            if (left + tooltipRect.width > window.innerWidth) {
+                left = e.clientX - tooltipRect.width - 10;
+            }
+
+            if (top < 0) {
+                top = e.clientY + 20;
+            }
+
+            this.tooltip.style.left = left + 'px';
+            this.tooltip.style.top = top + 'px';
+        }
+
+        hideTooltip() {
+            if (this.tooltip) {
+                this.tooltip.style.display = 'none';
+            }
+        }
+
+        startNodeDrag(e) {
+            // Allow dragging with: Alt+drag, middle click, or left click in positioning mode
+            const isAltDrag = this.parent.isAltPressed && e.button === 0;
+            const isMiddleClick = e.button === 1;
+            const isLeftClickInPositioningMode = e.button === 0 && this.parent.positioningMode && !this.parent.isAltPressed;
+
+            if (!isAltDrag && !isMiddleClick && !isLeftClickInPositioningMode) return;
+
+            e.stopPropagation();
+            e.preventDefault();
+
+            this.isDragging = true;
+            this.dragStartX = e.clientX;
+            this.dragStartY = e.clientY;
+
+            // Add global mouse event listeners
+            document.addEventListener('mousemove', this.handleNodeDrag.bind(this));
+            document.addEventListener('mouseup', this.endNodeDrag.bind(this));
+
+            // Visual feedback - different styles for different drag modes
+            if (isAltDrag) {
+                this.elements.group.style.opacity = '0.7';
+                this.elements.group.style.filter = 'brightness(1.2)';
+            } else if (isMiddleClick) {
+                this.elements.group.style.opacity = '0.6';
+                this.elements.group.style.filter = 'hue-rotate(30deg)';
+            } else {
+                this.elements.group.style.opacity = '0.8';
+            }
+        }
+
+        handleNodeDrag(e) {
+            if (!this.isDragging) return;
+
+            e.preventDefault();
+
+            const deltaX = e.clientX - this.dragStartX;
+            const deltaY = e.clientY - this.dragStartY;
+
+            // Calculate new position with constraints
+            const newX = this.position.x + deltaX / this.parent.visualScale;
+            const newY = this.position.y + deltaY / this.parent.visualScale;
+
+            // Apply position constraints
+            const constrainedPos = this.constrainPosition(newX, newY);
+
+            // Update position
+            this.updatePosition(constrainedPos.x, constrainedPos.y);
+
+            // Update drag start for next delta calculation
+            this.dragStartX = e.clientX;
+            this.dragStartY = e.clientY;
+
+            // Update connections in real-time with batching
+            this.parent.batchUpdateConnections(this.nodeId);
+        }
+
+        endNodeDrag(e) {
+            if (!this.isDragging) return;
+
+            this.isDragging = false;
+
+            // Remove global mouse event listeners
+            document.removeEventListener('mousemove', this.handleNodeDrag.bind(this));
+            document.removeEventListener('mouseup', this.endNodeDrag.bind(this));
+
+            // Reset visual feedback
+            this.elements.group.style.opacity = '1';
+            this.elements.group.style.filter = 'none';
+
+            // Ensure scaling is reset to baseline
+            this.scaleShape(1);
+        }
+
+        constrainPosition(x, y) {
+            // Keep nodes within SVG bounds with some padding
+            const padding = 30;
+            const minX = padding;
+            const minY = padding;
+            const maxX = 800 - padding; // Approximate SVG width
+            const maxY = 600 - padding; // Approximate SVG height
+
+            return {
+                x: Math.max(minX, Math.min(maxX, x)),
+                y: Math.max(minY, Math.min(maxY, y))
+            };
+        }
+
+        updatePosition(x, y) {
+            this.position.x = x;
+            this.position.y = y;
+
+            // Update shape position
+            if (this.elements.shape.tagName === 'circle') {
+                this.elements.shape.setAttribute('cx', x);
+                this.elements.shape.setAttribute('cy', y);
+            } else if (this.elements.shape.tagName === 'polygon') {
+                // Update diamond position by recalculating points
+                const size = 20;
+                const points = [
+                    [x, y - size],      // top
+                    [x + size, y],      // right
+                    [x, y + size],      // bottom
+                    [x - size, y]       // left
+                ];
+                this.elements.shape.setAttribute('points', points.map(p => p.join(',')).join(' '));
+            }
+
+            // Update text position
+            this.elements.text.setAttribute('x', x);
+            this.elements.text.setAttribute('y', y + 5);
+        }
+
+        remove() {
+            // Clean up tooltip
+            if (this.tooltip) {
+                this.tooltip.remove();
+                this.tooltip = null;
+            }
+
+            if (this.elements.group && this.elements.group.parentNode) {
+                this.elements.group.parentNode.removeChild(this.elements.group);
+            }
+        }
+    };
 
     // Visual Insertion Indicator Methods
     showInsertionIndicator() {
@@ -2969,6 +4242,311 @@ class TemplateEditorCMS {
             component.style.padding = '1rem';
         }
     }
+
+    // CSV Import Methods
+    openCsvFileDialog() {
+        this.csvFileInput.click();
+    }
+
+    async handleCsvFileSelection(event) {
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+
+        // Show visual feedback
+        this.importCsvBtn.disabled = true;
+        this.importCsvBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+        try {
+            await this.processCsvFiles(files);
+        } catch (error) {
+            console.error('CSV import failed:', error);
+            alert('CSV import failed: ' + error.message);
+        } finally {
+            // Reset button
+            this.importCsvBtn.disabled = false;
+            this.importCsvBtn.innerHTML = '<i class="fas fa-file-csv"></i> Import CSV';
+            // Clear file input
+            this.csvFileInput.value = '';
+        }
+    }
+
+    async processCsvFiles(files) {
+        let nodeFile = null;
+        let relationshipFile = null;
+
+        // Find the node and relationship CSV files
+        for (let file of files) {
+            if (file.name.includes('node-export') || file.name.includes('nodes')) {
+                nodeFile = file;
+            } else if (file.name.includes('relationship-export') || file.name.includes('relationships')) {
+                relationshipFile = file;
+            }
+        }
+
+        if (!nodeFile) {
+            throw new Error('Node CSV file not found. Please include a file with "node-export" or "nodes" in the name.');
+        }
+
+        // Parse CSV files
+        const csvParser = new this.CSVParser();
+        const nodeData = await csvParser.parseFile(nodeFile);
+        let relationshipData = [];
+
+        if (relationshipFile) {
+            relationshipData = await csvParser.parseFile(relationshipFile);
+        }
+
+        // Process and import data
+        await this.importCsvData(nodeData, relationshipData);
+    }
+
+    async importCsvData(nodeData, relationshipData) {
+        console.log('🚀 === CSV IMPORT STARTED ===');
+        console.log('Input data:', { nodes: nodeData.length, relationships: relationshipData.length });
+
+        // Clear existing nodes and visual network
+        console.log('🧹 Clearing existing visual network...');
+        this.clearVisualNetwork();
+        this.nodeList.innerHTML = '';
+        this.nodeCounter = 1;
+
+        // Create nodes from CSV data
+        console.log('📝 Creating DOM nodes from CSV data...');
+        nodeData.forEach((csvNode, index) => {
+            this.createNodeFromCsv(csvNode, index);
+        });
+        console.log(`✅ Created ${nodeData.length} DOM nodes`);
+
+        // Build relationship data
+        console.log('🔗 Processing relationships...');
+        this.processRelationships(nodeData, relationshipData);
+        console.log(`✅ Processed relationships: ${this.relationships ? this.relationships.length : 0} final relationships`);
+
+        // Rebuild visual network with new data
+        console.log('🎨 Rebuilding visual network...');
+        if (this.viewMode === 'visual') {
+            console.log('  Mode: VISUAL - Initializing visual network');
+            this.initializeVisualNetwork();
+        } else {
+            console.log('  Mode: LIST - Visual network not initialized');
+        }
+
+        // Select first node if available
+        if (nodeData.length > 0) {
+            const firstNodeId = nodeData[0].node_id || 'N001';
+            console.log(`🎯 Selecting first node: ${firstNodeId}`);
+            this.selectNode(firstNodeId);
+        }
+
+        console.log('🎉 CSV import completed successfully');
+        console.log('📊 Final state:', {
+            visualNodes: this.visualNodes.size,
+            relationships: this.relationships ? this.relationships.length : 0,
+            viewMode: this.viewMode
+        });
+        console.log('=== CSV IMPORT COMPLETE ===');
+    }
+
+    createNodeFromCsv(csvNode, index) {
+        const nodeId = csvNode.node_id || `N${String(index + 1).padStart(3, '0')}`;
+        const title = csvNode.name || csvNode.title || nodeId;
+        const isActive = index === 0;
+
+        // Extract metadata with safe fallbacks
+        const nodeType = this.extractNodeType(csvNode);
+        const difficulty = csvNode.difficulty ? parseInt(csvNode.difficulty) : null;
+        const timeMinutes = csvNode.time_minutes ? parseInt(csvNode.time_minutes) : null;
+        const description = csvNode.description || '';
+        const textbookPages = csvNode.textbook_pages || '';
+
+        const nodeElement = document.createElement('div');
+        nodeElement.className = `node-item${isActive ? ' active' : ''}`;
+        nodeElement.setAttribute('data-node-id', nodeId);
+
+        // Store metadata as DOM attributes
+        nodeElement.setAttribute('data-node-type', nodeType);
+        if (difficulty !== null) nodeElement.setAttribute('data-difficulty', difficulty);
+        if (timeMinutes !== null) nodeElement.setAttribute('data-time-minutes', timeMinutes);
+        if (description) nodeElement.setAttribute('data-description', description);
+        if (textbookPages) nodeElement.setAttribute('data-textbook-pages', textbookPages);
+
+        nodeElement.innerHTML = `
+            <div class="node-indicator"></div>
+            <div class="node-info">
+                <div class="node-id">${nodeId}</div>
+                <div class="node-title">${title}</div>
+            </div>
+            <div class="node-status empty"></div>
+        `;
+
+        this.nodeList.appendChild(nodeElement);
+        this.nodeCounter = Math.max(this.nodeCounter, parseInt(nodeId.replace(/\D/g, '')) + 1);
+    }
+
+    // Helper method to extract node type from CSV data
+    extractNodeType(csvNode) {
+        // Primary: use 'type' field
+        if (csvNode.type) return csvNode.type;
+
+        // Secondary: parse from '~labels' field
+        if (csvNode['~labels']) {
+            const labels = csvNode['~labels'];
+            if (labels.includes('support')) return 'support';
+            if (labels.includes('enrichment')) return 'enrichment';
+            if (labels.includes('core')) return 'core';
+        }
+
+        // Default fallback
+        return 'core';
+    }
+
+    // Process relationships from CSV data
+    processRelationships(nodeData, relationshipData) {
+        console.log('=== CSV RELATIONSHIP PROCESSING DEBUGGING ===');
+        console.log(`Input: ${nodeData.length} nodes, ${relationshipData.length} relationships`);
+
+        // Initialize relationship storage
+        this.relationships = [];
+        this.csvIdMap = new Map();
+
+        // Build CSV ID to node ID mapping with detailed logging
+        console.log('Building CSV ID mappings:');
+        nodeData.forEach((node, index) => {
+            if (node['~id'] && node.node_id) {
+                this.csvIdMap.set(node['~id'], node.node_id);
+                console.log(`  ${index + 1}. "${node['~id']}" --> "${node.node_id}"`);
+            } else {
+                console.log(`  ${index + 1}. SKIPPED - Missing ~id or node_id:`, {
+                    '~id': node['~id'],
+                    'node_id': node.node_id
+                });
+            }
+        });
+
+        console.log(`Built ID mapping for ${this.csvIdMap.size} nodes`);
+        console.log('Complete mapping:', Object.fromEntries(this.csvIdMap));
+
+        // Process relationships with validation
+        if (relationshipData && relationshipData.length > 0) {
+            let validRelationships = 0;
+            let skippedRelationships = 0;
+
+            console.log('Processing relationships:');
+            relationshipData.forEach((rel, index) => {
+                console.log(`  Relationship ${index + 1}:`);
+                console.log(`    Raw: "${rel['~start_node_id']}" --[${rel['~relationship_type']}]--> "${rel['~end_node_id']}"`);
+
+                const fromId = this.csvIdMap.get(rel['~start_node_id']);
+                const toId = this.csvIdMap.get(rel['~end_node_id']);
+
+                console.log(`    Mapped: "${fromId}" --[${rel['~relationship_type']}]--> "${toId}"`);
+
+                if (fromId && toId && fromId !== toId) {
+                    const relationship = {
+                        from: fromId,
+                        to: toId,
+                        type: rel['~relationship_type'] || rel.type || 'LEADS_TO',
+                        explanation: rel.explanation || ''
+                    };
+                    this.relationships.push(relationship);
+                    validRelationships++;
+                    console.log(`    ✅ VALID: Added relationship`);
+                } else {
+                    skippedRelationships++;
+                    console.log(`    ❌ SKIPPED: fromId=${!!fromId}, toId=${!!toId}, same=${fromId === toId}`);
+                    if (!fromId) console.log(`      Missing mapping for start_node_id: "${rel['~start_node_id']}"`);
+                    if (!toId) console.log(`      Missing mapping for end_node_id: "${rel['~end_node_id']}"`);
+                    if (fromId === toId) console.log(`      Self-referencing relationship: "${fromId}"`);
+                }
+            });
+
+            console.log(`Processed relationships: ${validRelationships} valid, ${skippedRelationships} skipped`);
+            console.log('Final relationships array:', this.relationships);
+        } else {
+            console.log('No relationship data found, will use sequential connections');
+        }
+        console.log('=== END CSV RELATIONSHIP PROCESSING ===');
+    }
+
+    // CSV Parser Class
+    CSVParser = class {
+        async parseFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const csv = e.target.result;
+                        const parsed = this.parseCSV(csv);
+                        resolve(parsed);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = () => reject(new Error('Failed to read file'));
+                reader.readAsText(file);
+            });
+        }
+
+        parseCSV(csvText) {
+            const lines = csvText.split('\n');
+            if (lines.length < 2) return [];
+
+            const headers = this.parseCSVLine(lines[0]);
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                const values = this.parseCSVLine(line);
+                if (values.length !== headers.length) continue;
+
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = values[index] || '';
+                });
+                data.push(row);
+            }
+
+            return data;
+        }
+
+        parseCSVLine(line) {
+            // Clean line endings and whitespace
+            const cleanLine = line.replace(/\r?\n$/, '').trim();
+
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+
+            console.log(`Parsing line: "${cleanLine}" (length: ${cleanLine.length})`);
+
+            for (let i = 0; i < cleanLine.length; i++) {
+                const char = cleanLine[i];
+                const nextChar = cleanLine[i + 1];
+
+                if (char === '"') {
+                    if (inQuotes && nextChar === '"') {
+                        current += '"';
+                        i++; // Skip next quote
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+
+            // Push the final field
+            result.push(current.trim());
+
+            console.log(`Parsed ${result.length} fields:`, result.map((field, i) => `${i}: "${field}"`));
+            return result;
+        }
+    };
 }
 
 // Global bridge functions for AI API interaction
