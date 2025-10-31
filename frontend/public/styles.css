@@ -3164,3 +3164,802 @@ body {
     user-select: none;
 }
 
+/* ===== ENHANCED NODE LIST STYLES (SAFE ADDITIONS) ===== */
+/* These styles enhance the existing node list with editing capabilities */
+/* All new classes use 'enhanced-' prefix to avoid conflicts */
+
+/* Enhanced Node Type Groups */
+.enhanced-node-type-group {
+    margin-bottom: 8px;
+}
+
+.enhanced-node-type-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+}
+
+.enhanced-node-type-header:hover {
+    background: #f8f8f8;
+}
+
+.enhanced-node-type-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.enhanced-node-type-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+}
+
+.enhanced-node-type-icon.core {
+    background: #2196F3;
+}
+
+.enhanced-node-type-icon.support {
+    background: #FF9800;
+}
+
+.enhanced-node-type-icon.enrichment {
+    background: #9C27B0;
+}
+
+.enhanced-node-type-count {
+    font-size: 11px;
+    color: #666;
+    font-weight: 500;
+}
+
+.enhanced-collapse-icon {
+    font-size: 12px;
+    transition: transform 0.2s;
+}
+
+.enhanced-node-type-group.collapsed .enhanced-collapse-icon {
+    transform: rotate(-90deg);
+}
+
+/* Enhanced Node Type Content */
+.enhanced-node-type-content {
+    max-height: 2000px;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.enhanced-node-type-group.collapsed .enhanced-node-type-content {
+    max-height: 0;
+}
+
+/* Enhanced Node Items - Preserve existing .node-item behavior */
+.node-item.enhanced-node-item {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin: 0 12px 6px 12px;
+    overflow: hidden;
+}
+
+.node-item.enhanced-node-item:hover {
+    border-color: #ccc;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.node-item.enhanced-node-item.core {
+    border-left: 3px solid #2196F3;
+}
+
+.node-item.enhanced-node-item.support {
+    border-left: 3px solid #FF9800;
+}
+
+.node-item.enhanced-node-item.enrichment {
+    border-left: 3px solid #9C27B0;
+}
+
+/* Enhanced Node Collapsed View */
+.enhanced-node-collapsed {
+    padding: 10px 12px;
+}
+
+.enhanced-node-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.enhanced-node-main-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.enhanced-node-title-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.enhanced-node-id {
+    font-size: 11px;
+    font-weight: 600;
+    color: #666;
+    font-family: 'Courier New', monospace;
+}
+
+.enhanced-node-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Pencil Edit Button - The key feature! */
+.enhanced-node-edit-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: all 0.2s;
+}
+
+.node-item.enhanced-node-item:hover .enhanced-node-edit-btn {
+    opacity: 1;
+}
+
+.enhanced-node-edit-btn:hover {
+    background: #f0f0f0;
+}
+
+/* Enhanced Prerequisites */
+.enhanced-node-prerequisites {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.enhanced-prereq-label {
+    font-size: 11px;
+    color: #999;
+}
+
+.enhanced-prereq-pill {
+    font-size: 11px;
+    padding: 2px 6px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    color: #666;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.enhanced-prereq-pill:hover {
+    background: #e0e0e0;
+    color: #333;
+}
+
+/* Enhanced Metadata Display */
+.enhanced-node-metadata {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 11px;
+    color: #666;
+}
+
+.enhanced-metadata-item {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+/* Status Dots - Enhanced but compatible */
+.enhanced-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.enhanced-status-dot.empty {
+    background: #e0e0e0;
+}
+
+.enhanced-status-dot.draft {
+    background: #FF9800;
+}
+
+.enhanced-status-dot.complete {
+    background: #4CAF50;
+}
+
+/* Enhanced Node Expanded View (Edit Mode) */
+.enhanced-node-expanded {
+    padding: 14px;
+    background: #fafafa;
+    border-top: 1px solid #e0e0e0;
+    display: none;
+}
+
+.node-item.enhanced-node-item.editing .enhanced-node-expanded {
+    display: block;
+}
+
+.node-item.enhanced-node-item.editing .enhanced-node-collapsed {
+    background: #fafafa;
+}
+
+/* Edit Form Styles */
+.enhanced-edit-section {
+    margin-bottom: 12px;
+}
+
+.enhanced-edit-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.enhanced-edit-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    transition: border 0.2s;
+}
+
+.enhanced-edit-input:focus {
+    outline: none;
+    border-color: #2196F3;
+}
+
+.enhanced-edit-input.node-id-input {
+    width: 80px;
+    font-family: 'Courier New', monospace;
+}
+
+.enhanced-edit-row {
+    display: flex;
+    gap: 8px;
+}
+
+.enhanced-edit-row .enhanced-edit-section {
+    flex: 1;
+}
+
+.enhanced-edit-select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    background: white;
+    cursor: pointer;
+}
+
+/* Difficulty Stars */
+.enhanced-difficulty-stars {
+    display: flex;
+    gap: 4px;
+}
+
+.enhanced-star {
+    cursor: pointer;
+    font-size: 16px;
+    color: #ddd;
+}
+
+.enhanced-star.filled {
+    color: #FF9800;
+}
+
+/* Action Buttons */
+.enhanced-edit-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.enhanced-btn {
+    flex: 1;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.enhanced-btn-primary {
+    background: #2196F3;
+    color: white;
+}
+
+.enhanced-btn-primary:hover {
+    background: #1976D2;
+}
+
+.enhanced-btn-secondary {
+    background: white;
+    color: #666;
+    border: 1px solid #ddd;
+}
+
+.enhanced-btn-secondary:hover {
+    background: #f8f8f8;
+}
+
+/* Prerequisite Editor */
+.enhanced-prereq-editor {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.enhanced-prereq-tag {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+}
+
+.enhanced-prereq-remove {
+    cursor: pointer;
+    color: #999;
+    font-weight: bold;
+    margin-left: 2px;
+}
+
+.enhanced-prereq-remove:hover {
+    color: #f44336;
+}
+
+.enhanced-prereq-add {
+    padding: 4px 8px;
+    font-size: 12px;
+    background: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.enhanced-prereq-add:hover {
+    background: #1976D2;
+}
+
+/* ===== DOWNLOADS DESIGN STYLES (GRADUAL TRANSITION) ===== */
+/* Adding Downloads styles alongside existing ones for gradual migration */
+
+/* Chapter Selector - NEW FEATURE */
+.chapter-selector {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.chapter-selector select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+}
+
+/* Downloads Node Type Groups */
+.downloads-node-type-group {
+    margin-bottom: 8px;
+}
+
+.downloads-node-type-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+}
+
+.downloads-node-type-header:hover {
+    background: #f8f8f8;
+}
+
+.downloads-node-type-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.downloads-node-type-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+}
+
+.downloads-node-type-icon.core {
+    background: #2196F3;
+}
+
+.downloads-node-type-icon.support {
+    background: #FF9800;
+}
+
+.downloads-node-type-icon.enrichment {
+    background: #9C27B0;
+}
+
+.downloads-node-type-count {
+    font-size: 11px;
+    color: #666;
+    font-weight: 500;
+}
+
+.downloads-collapse-icon {
+    font-size: 12px;
+    transition: transform 0.2s;
+}
+
+.downloads-node-type-group.collapsed .downloads-collapse-icon {
+    transform: rotate(-90deg);
+}
+
+/* Downloads Node Type Content */
+.downloads-node-type-content {
+    max-height: 2000px;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.downloads-node-type-group.collapsed .downloads-node-type-content {
+    max-height: 0;
+}
+
+/* Downloads Individual Node Items */
+.node-item.downloads-node-item {
+    margin: 0 12px 6px 12px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    overflow: hidden;
+}
+
+.node-item.downloads-node-item:hover {
+    border-color: #ccc;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.node-item.downloads-node-item.selected {
+    border-color: #2196F3;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+}
+
+.node-item.downloads-node-item.core {
+    border-left: 3px solid #2196F3;
+}
+
+.node-item.downloads-node-item.support {
+    border-left: 3px solid #FF9800;
+}
+
+.node-item.downloads-node-item.enrichment {
+    border-left: 3px solid #9C27B0;
+}
+
+/* Downloads Node Collapsed View */
+.downloads-node-collapsed {
+    padding: 10px 12px;
+}
+
+.downloads-node-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.downloads-node-main-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.downloads-node-title-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.downloads-node-id {
+    font-size: 11px;
+    font-weight: 600;
+    color: #666;
+    font-family: 'Courier New', monospace;
+}
+
+.downloads-node-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.downloads-node-edit-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: all 0.2s;
+}
+
+.node-item.downloads-node-item:hover .downloads-node-edit-btn {
+    opacity: 1;
+}
+
+.downloads-node-edit-btn:hover {
+    background: #f0f0f0;
+}
+
+.downloads-node-prerequisites {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.downloads-prereq-label {
+    font-size: 11px;
+    color: #999;
+}
+
+.downloads-prereq-pill {
+    font-size: 11px;
+    padding: 2px 6px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    color: #666;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.downloads-prereq-pill:hover {
+    background: #e0e0e0;
+    color: #333;
+}
+
+.downloads-node-metadata {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 11px;
+    color: #666;
+}
+
+.downloads-metadata-item {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.downloads-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.downloads-status-dot.empty {
+    background: #e0e0e0;
+}
+
+.downloads-status-dot.draft {
+    background: #FF9800;
+}
+
+.downloads-status-dot.complete {
+    background: #4CAF50;
+}
+
+/* Downloads Node Expanded View (Edit Mode) */
+.downloads-node-expanded {
+    padding: 0 14px;
+    background: white;
+    border-top: 1px solid #e0e0e0;
+    max-height: 0;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+}
+
+.node-item.downloads-node-item.editing .downloads-node-expanded {
+    max-height: 600px;
+    padding: 14px;
+}
+
+.node-item.downloads-node-item.editing .downloads-node-collapsed {
+    background: white;
+}
+
+/* Smooth transitions for the entire card */
+.node-item.downloads-node-item {
+    transition: all 0.2s ease;
+}
+
+.downloads-edit-section {
+    margin-bottom: 12px;
+}
+
+.downloads-edit-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.downloads-edit-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+    transition: border 0.2s;
+}
+
+.downloads-edit-input:focus {
+    outline: none;
+    border-color: #2196F3;
+}
+
+.downloads-edit-input.node-id-input {
+    width: 80px;
+    font-family: 'Courier New', monospace;
+}
+
+.downloads-edit-row {
+    display: flex;
+    gap: 8px;
+}
+
+.downloads-edit-row .downloads-edit-section {
+    flex: 1;
+}
+
+.downloads-edit-select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    background: white;
+    cursor: pointer;
+}
+
+.downloads-difficulty-stars {
+    display: flex;
+    gap: 4px;
+}
+
+.downloads-star {
+    cursor: pointer;
+    font-size: 16px;
+    color: #ddd;
+}
+
+.downloads-star.filled {
+    color: #FF9800;
+}
+
+.downloads-edit-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.downloads-btn {
+    flex: 1;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.downloads-btn-primary {
+    background: #2196F3;
+    color: white;
+}
+
+.downloads-btn-primary:hover {
+    background: #1976D2;
+}
+
+.downloads-btn-secondary {
+    background: white;
+    color: #666;
+    border: 1px solid #ddd;
+}
+
+.downloads-btn-secondary:hover {
+    background: #f8f8f8;
+}
+
+/* =================================================================== */
+/* SOPHISTICATED UI LAYOUT FIXES - Override Legacy CSS Conflicts     */
+/* =================================================================== */
+
+/* Fix layout conflicts for downloads-node-item */
+.node-item.downloads-node-item {
+    display: block !important;     /* Override legacy flex layout */
+    padding: 0 !important;         /* Let inner divs control padding */
+    align-items: unset !important; /* Remove legacy alignment */
+    gap: unset !important;         /* Remove legacy gap */
+}
+
+/* Ensure edit button hover works correctly */
+.node-item.downloads-node-item:hover .downloads-node-edit-btn {
+    opacity: 1 !important;
+}
+
+/* Fix any nested flex issues */
+.downloads-node-header-row {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+}
+

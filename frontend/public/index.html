@@ -157,7 +157,6 @@
                         <button id="api-add-two-pictures" onclick="insertComponent('two-pictures')">Add Two Pictures</button>
 
                         <!-- Node Management Buttons -->
-                        <button id="api-add-node" onclick="addNewNode()">Add Node</button>
                         <button id="api-delete-node" onclick="deleteCurrentNode()">Delete Node</button>
                         <button id="api-select-node" onclick="selectNode(arguments[0])">Select Node</button>
 
@@ -196,6 +195,16 @@
                             </div>
                             <input type="file" id="csv-file-input" accept=".csv" multiple style="display: none;">
                         </div>
+
+                        <!-- Chapter Selector - Downloads Design -->
+                        <div class="chapter-selector">
+                            <select id="chapter-select">
+                                <option value="1">Chapter 1: Fractions</option>
+                                <option value="2">Chapter 2: Decimals</option>
+                                <option value="3">Chapter 3: Percentages</option>
+                            </select>
+                        </div>
+
                         <div class="node-list" id="node-list">
                             <!-- Nodes will be loaded dynamically from session -->
                         </div>

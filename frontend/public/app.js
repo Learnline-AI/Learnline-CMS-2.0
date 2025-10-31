@@ -7,6 +7,13 @@ class TemplateEditorCMS {
         this.nodeCounter = 0; // Will be calculated from loaded session nodes
         this.selectedComponentColor = 'neutral'; // Default component color
 
+        // Content loading state protection
+        this.isLoadingContent = false;
+
+        // SelectNode debouncing to prevent rapid-fire double events
+        this.lastSelectTime = 0;
+        this.selectDebounceMs = 100;
+
         // Drag and drop reordering state
         this.isDraggingComponent = false;
         this.draggedElement = null;
@@ -241,6 +248,14 @@ class TemplateEditorCMS {
         this.nodeCounter++;
         const nodeId = `N${String(this.nodeCounter).padStart(3, '0')}`;
 
+        // Validate node ID before creation
+        if (!this.isValidNodeId(nodeId)) {
+            console.error(`❌ Generated invalid node ID: ${nodeId}`);
+            throw new Error(`Invalid node ID format: ${nodeId}`);
+        }
+
+        console.log(`✅ Creating new node with validated ID: ${nodeId}`);
+
         // Create session node first
         const sessionNodeData = {
             node_id: nodeId,
@@ -297,21 +312,39 @@ class TemplateEditorCMS {
     }
 
     selectNode(nodeId) {
+        console.log(`🎯 selectNode called with nodeId: ${nodeId}`);
+
+        // Debounce rapid-fire selectNode calls to prevent double events
+        const currentTime = Date.now();
+        if (currentTime - this.lastSelectTime < this.selectDebounceMs) {
+            console.log(`⏱️ Debouncing selectNode call for ${nodeId} (${currentTime - this.lastSelectTime}ms since last call)`);
+            return;
+        }
+        this.lastSelectTime = currentTime;
+        console.log(`✅ Proceeding with selectNode for ${nodeId}`);
+
         // Remove active class from all nodes
-        document.querySelectorAll('.node-item').forEach(item => {
+        const allNodes = document.querySelectorAll('.node-item');
+        console.log(`📋 Found ${allNodes.length} total .node-item elements`);
+        allNodes.forEach(item => {
             item.classList.remove('active');
         });
 
         // Add active class to selected node
         const selectedNodeItem = document.querySelector(`[data-node-id="${nodeId}"]`);
+        console.log(`🔍 querySelector result for [data-node-id="${nodeId}"]:`, selectedNodeItem);
+
         if (selectedNodeItem) {
             selectedNodeItem.classList.add('active');
             this.selectedNode = nodeId;
+            console.log(`✅ Node ${nodeId} set as active, calling loadNodeContent`);
 
             // Update visual node selection
             this.updateVisualNodeSelection(nodeId);
 
             this.loadNodeContent(nodeId);
+        } else {
+            console.log(`❌ No element found with [data-node-id="${nodeId}"]`);
         }
     }
 
@@ -323,30 +356,53 @@ class TemplateEditorCMS {
     }
 
     async loadNodeContent(nodeId) {
-        // Clear the editor canvas first
-        this.clearEditor();
+        console.log(`📂 loadNodeContent called for nodeId: ${nodeId}`);
+        console.log(`🔗 API URL: ${this.apiBaseUrl}/nodes/${nodeId}/components`);
+
+        // Prevent simultaneous content loading to avoid duplication
+        if (this.isLoadingContent) {
+            console.log(`⏳ Already loading content, skipping duplicate call for ${nodeId}`);
+            return;
+        }
+
+        this.isLoadingContent = true;
+        console.log(`🔒 Set loading state to prevent race conditions`);
 
         try {
+            // Clear the editor canvas first
+            this.clearEditor();
+            console.log(`🧹 Editor cleared`);
+
             // Fetch saved components for this node
             const response = await fetch(`${this.apiBaseUrl}/nodes/${nodeId}/components`);
+            console.log(`📡 API response status: ${response.status} ${response.statusText}`);
             const data = await response.json();
+            console.log(`📦 API response data:`, data);
 
             if (data.components && data.components.length > 0) {
+                console.log(`✅ Found ${data.components.length} components for node ${nodeId}`);
                 // Recreate each component in the editor
                 data.components.forEach(componentData => {
                     const componentElement = this.createComponentElement(componentData.type, componentData.parameters);
                     this.dropZone.appendChild(componentElement);
+                    console.log(`🔧 Added component: ${componentData.type}`);
                 });
+            } else {
+                console.log(`📭 No components found for node ${nodeId}`);
             }
 
             // Update placeholder visibility based on component count
             this.updateDropZonePlaceholders();
         } catch (error) {
-            console.log(`No saved content found for node ${nodeId} or error loading:`, error);
+            console.log(`❌ Error loading content for node ${nodeId}:`, error);
+        } finally {
+            // Always reset loading state
+            this.isLoadingContent = false;
+            console.log(`🔓 Released loading state for ${nodeId}`);
         }
 
         this.updatePreview();
-        console.log(`Loaded content for node: ${nodeId}`);
+        console.log(`🎬 Loaded content for node: ${nodeId}`);
     }
 
     // Component Drag and Drop Methods
@@ -3685,16 +3741,10 @@ class TemplateEditorCMS {
         }
 
         constrainPosition(x, y) {
-            // Keep nodes within SVG bounds with some padding
-            const padding = 30;
-            const minX = padding;
-            const minY = padding;
-            const maxX = 800 - padding; // Approximate SVG width
-            const maxY = 600 - padding; // Approximate SVG height
-
+            // Allow infinite canvas - no artificial boundaries
             return {
-                x: Math.max(minX, Math.min(maxX, x)),
-                y: Math.max(minY, Math.min(maxY, y))
+                x: x,
+                y: y
             };
         }
 
@@ -4546,28 +4596,183 @@ class TemplateEditorCMS {
             return;
         }
 
-        // Create node element using same structure as existing methods
-        const nodeElement = document.createElement('div');
-        nodeElement.className = 'node-item';
-        nodeElement.setAttribute('data-node-id', nodeId);
+        // Determine node type from ID prefix
+        const nodeType = this.determineNodeType(nodeId);
 
         // Use session node data or fallbacks
         const title = sessionNode.title || nodeId;
         const status = this.getSessionNodeStatus(sessionNode);
+        const contentCount = sessionNode.content_count || 0;
 
-        nodeElement.innerHTML = `
-            <div class="node-indicator"></div>
-            <div class="node-info">
+        // Store node data for group organization
+        if (!this.nodesByType) {
+            this.nodesByType = { core: [], support: [], enrichment: [] };
+        }
+
+        this.nodesByType[nodeType].push({
+            nodeId,
+            title,
+            status,
+            contentCount,
+            sessionNode
+        });
+
+        // Rebuild the entire node list with proper grouping
+        this.rebuildNodeListWithGroups();
+
+        console.log(`Added node ${nodeId} to ${nodeType} group`);
+    }
+
+    rebuildNodeListWithGroups() {
+        // Clear existing content
+        this.nodeList.innerHTML = '';
+
+        // Create node type groups
+        const nodeTypes = [
+            { key: 'core', label: 'CORE NODES', icon: 'core' },
+            { key: 'support', label: 'SUPPORT NODES', icon: 'support' },
+            { key: 'enrichment', label: 'ENRICHMENT NODES', icon: 'enrichment' }
+        ];
+
+        nodeTypes.forEach(type => {
+            const nodes = this.nodesByType[type.key] || [];
+            if (nodes.length > 0) {
+                this.nodeList.appendChild(this.createNodeTypeGroup(type, nodes));
+            }
+        });
+    }
+
+    createNodeTypeGroup(type, nodes) {
+        const group = document.createElement('div');
+        group.className = 'downloads-node-type-group';
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'downloads-node-type-header';
+        header.innerHTML = `
+            <div class="downloads-node-type-label">
+                <div class="downloads-node-type-icon ${type.icon}"></div>
+                <span>${type.label}</span>
+                <span class="downloads-node-type-count">(${nodes.length})</span>
+            </div>
+            <span class="downloads-collapse-icon">▼</span>
+        `;
+        header.addEventListener('click', () => this.toggleGroup(type.key));
+
+        // Content
+        const content = document.createElement('div');
+        content.className = 'downloads-node-type-content';
+        content.id = `group-content-${type.key}`;
+
+        nodes.forEach(nodeData => {
+            content.appendChild(this.createDownloadsNodeItem(nodeData, type.key));
+        });
+
+        group.appendChild(header);
+        group.appendChild(content);
+        return group;
+    }
+
+    createDownloadsNodeItem(nodeData, nodeType) {
+        const { nodeId, title, status, contentCount } = nodeData;
+
+        const item = document.createElement('div');
+        item.className = `node-item downloads-node-item ${nodeType}`;
+        item.setAttribute('data-node-id', nodeId);
+
+        if (this.selectedNode === nodeId) {
+            item.classList.add('selected');
+        }
+
+        // Downloads-style node structure
+        item.innerHTML = `
+            <div class="downloads-node-collapsed">
+                <div class="downloads-node-header-row">
+                    <div class="downloads-node-main-info">
+                        <div class="downloads-node-title-row">
+                            <span class="downloads-node-id">${nodeId}</span>
+                            <span class="downloads-node-title">${title}</span>
+                        </div>
+                        <div class="downloads-node-metadata">
+                            <div class="downloads-metadata-item">
+                                <div class="downloads-status-dot ${status}"></div>
+                                <span>${contentCount} components</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="downloads-node-edit-btn" onclick="event.stopPropagation(); window.cmsApp.toggleEdit('${nodeId}')">✏️</button>
+                </div>
+            </div>
+            <div class="downloads-node-expanded">
+                <div class="downloads-edit-row">
+                    <div class="downloads-edit-section">
+                        <label class="downloads-edit-label">Node ID</label>
+                        <input type="text" class="downloads-edit-input node-id-input" value="${nodeId}" id="edit-id-${nodeId}">
+                    </div>
+                    <div class="downloads-edit-section" style="flex: 2;">
+                        <label class="downloads-edit-label">Title</label>
+                        <input type="text" class="downloads-edit-input" value="${title}" id="edit-title-${nodeId}">
+                    </div>
+                </div>
+                <div class="downloads-edit-row">
+                    <div class="downloads-edit-section">
+                        <label class="downloads-edit-label">Type</label>
+                        <select class="downloads-edit-select" id="edit-type-${nodeId}">
+                            <option value="core" ${nodeType === 'core' ? 'selected' : ''}>Core</option>
+                            <option value="support" ${nodeType === 'support' ? 'selected' : ''}>Support</option>
+                            <option value="enrichment" ${nodeType === 'enrichment' ? 'selected' : ''}>Enrichment</option>
+                        </select>
+                    </div>
+                    <div class="downloads-edit-section">
+                        <label class="downloads-edit-label">Status</label>
+                        <select class="downloads-edit-select" id="edit-status-${nodeId}">
+                            <option value="empty" ${status === 'empty' ? 'selected' : ''}>Empty</option>
+                            <option value="draft" ${status === 'draft' ? 'selected' : ''}>Draft</option>
+                            <option value="complete" ${status === 'complete' ? 'selected' : ''}>Complete</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="downloads-edit-actions">
+                    <button class="downloads-btn downloads-btn-secondary" onclick="window.cmsApp.cancelEdit('${nodeId}')">Cancel</button>
+                    <button class="downloads-btn downloads-btn-primary" onclick="window.cmsApp.saveEdit('${nodeId}')">Save Changes</button>
+                </div>
+            </div>
+
+            <!-- Legacy structure for compatibility -->
+            <div class="node-indicator" style="display: none;"></div>
+            <div class="node-info" style="display: none;">
                 <div class="node-id">${nodeId}</div>
                 <div class="node-title">${title}</div>
             </div>
-            <div class="node-status ${status}"></div>
+            <div class="node-status ${status}" style="display: none;"></div>
         `;
 
-        // Add to node list
-        this.nodeList.appendChild(nodeElement);
+        // Add click handler for node selection (but not when editing)
+        item.addEventListener('click', (e) => {
+            // Prevent event bubbling to avoid double selectNode calls from delegated handler
+            e.stopPropagation();
 
-        console.log(`Created DOM element for session node: ${nodeId}`);
+            console.log(`🖱️ Sophisticated UI node clicked: ${nodeId}`, {
+                hasEditingClass: item.classList.contains('editing'),
+                classList: item.classList.toString(),
+                target: e.target,
+                currentTarget: e.currentTarget
+            });
+
+            if (!item.classList.contains('editing')) {
+                console.log(`✅ Calling selectNode(${nodeId})`);
+                this.selectNode(nodeId);
+            } else {
+                console.log(`❌ Node ${nodeId} is in editing mode, skipping selection`);
+            }
+        });
+
+        return item;
+    }
+
+    toggleGroup(groupKey) {
+        const group = document.querySelector(`#group-content-${groupKey}`).parentElement;
+        group.classList.toggle('collapsed');
     }
 
     getSessionNodeStatus(sessionNode) {
@@ -4576,6 +4781,131 @@ class TemplateEditorCMS {
             return 'draft'; // Has content
         }
         return 'empty'; // No content yet
+    }
+
+    // Enhanced Node List Methods
+    determineNodeType(nodeId) {
+        // Determine node type from ID prefix with validation
+        if (!this.isValidNodeId(nodeId)) {
+            console.warn(`⚠️ Invalid node ID format: ${nodeId}, using core as fallback`);
+            return 'core';
+        }
+
+        if (nodeId.startsWith('N')) return 'core';
+        if (nodeId.startsWith('S')) return 'support';
+        if (nodeId.startsWith('E')) return 'enrichment';
+        return 'core'; // Default fallback
+    }
+
+    // Node ID validation to prevent future malformed IDs
+    isValidNodeId(nodeId) {
+        // Valid format: N001, S001, E001 (letter + 3 digits)
+        const validPattern = /^[NSE]\d{3}$/;
+        return validPattern.test(nodeId);
+    }
+
+    toggleEdit(nodeId) {
+        const nodeElement = document.querySelector(`[data-node-id="${nodeId}"]`);
+        if (!nodeElement) return;
+
+        if (nodeElement.classList.contains('editing')) {
+            this.cancelEdit(nodeId);
+        } else {
+            // Cancel any other editing nodes first
+            document.querySelectorAll('.node-item.editing').forEach(el => {
+                el.classList.remove('editing');
+            });
+
+            nodeElement.classList.add('editing');
+            console.log(`Started editing node: ${nodeId}`);
+        }
+    }
+
+    cancelEdit(nodeId) {
+        const nodeElement = document.querySelector(`[data-node-id="${nodeId}"]`);
+        if (!nodeElement) return;
+
+        nodeElement.classList.remove('editing');
+        console.log(`Cancelled editing node: ${nodeId}`);
+    }
+
+    async saveEdit(nodeId) {
+        const nodeElement = document.querySelector(`[data-node-id="${nodeId}"]`);
+        if (!nodeElement) return;
+
+        try {
+            // Get edited values
+            const newTitle = document.getElementById(`edit-title-${nodeId}`).value;
+            const newType = document.getElementById(`edit-type-${nodeId}`).value;
+            const newStatus = document.getElementById(`edit-status-${nodeId}`).value;
+
+            console.log(`Saving node ${nodeId}:`, { newTitle, newType, newStatus });
+
+            // Update session node via API - preserving existing session-based architecture
+            const updateData = {
+                title: newTitle,
+                // Note: Type changes would require more complex backend handling
+                // Status is informational for now
+            };
+
+            const response = await fetch(`${this.apiBaseUrl}/session/${this.sessionId}/nodes/${nodeId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updateData)
+            });
+
+            if (response.ok) {
+                // Update Downloads-style DOM elements to reflect changes
+                const titleElement = nodeElement.querySelector('.downloads-node-title');
+                if (titleElement) {
+                    titleElement.textContent = newTitle;
+                }
+
+                // Update legacy elements for compatibility
+                const legacyTitleElement = nodeElement.querySelector('.node-title');
+                if (legacyTitleElement) {
+                    legacyTitleElement.textContent = newTitle;
+                }
+
+                // Update node type class if changed
+                nodeElement.classList.remove('core', 'support', 'enrichment');
+                nodeElement.classList.add(newType);
+                nodeElement.setAttribute('data-node-type', newType);
+
+                // Update nodesByType data structure
+                if (this.nodesByType) {
+                    // Remove from old type
+                    ['core', 'support', 'enrichment'].forEach(type => {
+                        this.nodesByType[type] = this.nodesByType[type].filter(n => n.nodeId !== nodeId);
+                    });
+
+                    // Add to new type with updated data
+                    const nodeData = this.nodesByType[newType].find(n => n.nodeId === nodeId) ||
+                                    { nodeId, title: newTitle, status: newStatus, contentCount: 0 };
+                    nodeData.title = newTitle;
+                    this.nodesByType[newType].push(nodeData);
+
+                    // Rebuild groups if type changed
+                    if (nodeElement.getAttribute('data-node-type') !== newType) {
+                        this.rebuildNodeListWithGroups();
+                    }
+                }
+
+                nodeElement.classList.remove('editing');
+                console.log(`Successfully saved changes to node: ${nodeId}`);
+
+                // Schedule auto-save for session persistence
+                this.scheduleAutoSave();
+            } else {
+                console.error('Failed to save node changes:', response.statusText);
+                alert('Failed to save changes. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error saving node changes:', error);
+            alert('Error saving changes. Please try again.');
+        }
     }
 
     // Auto-Save Methods
@@ -4810,41 +5140,7 @@ class TemplateEditorCMS {
         console.log('=== CSV IMPORT COMPLETE ===');
     }
 
-    createNodeFromCsv(csvNode, index) {
-        const nodeId = csvNode.node_id || `N${String(index + 1).padStart(3, '0')}`;
-        const title = csvNode.name || csvNode.title || nodeId;
-        const isActive = index === 0;
-
-        // Extract metadata with safe fallbacks
-        const nodeType = this.extractNodeType(csvNode);
-        const difficulty = csvNode.difficulty ? parseInt(csvNode.difficulty) : null;
-        const timeMinutes = csvNode.time_minutes ? parseInt(csvNode.time_minutes) : null;
-        const description = csvNode.description || '';
-        const textbookPages = csvNode.textbook_pages || '';
-
-        const nodeElement = document.createElement('div');
-        nodeElement.className = `node-item${isActive ? ' active' : ''}`;
-        nodeElement.setAttribute('data-node-id', nodeId);
-
-        // Store metadata as DOM attributes
-        nodeElement.setAttribute('data-node-type', nodeType);
-        if (difficulty !== null) nodeElement.setAttribute('data-difficulty', difficulty);
-        if (timeMinutes !== null) nodeElement.setAttribute('data-time-minutes', timeMinutes);
-        if (description) nodeElement.setAttribute('data-description', description);
-        if (textbookPages) nodeElement.setAttribute('data-textbook-pages', textbookPages);
-
-        nodeElement.innerHTML = `
-            <div class="node-indicator"></div>
-            <div class="node-info">
-                <div class="node-id">${nodeId}</div>
-                <div class="node-title">${title}</div>
-            </div>
-            <div class="node-status empty"></div>
-        `;
-
-        this.nodeList.appendChild(nodeElement);
-        this.nodeCounter = Math.max(this.nodeCounter, parseInt(nodeId.replace(/\D/g, '')) + 1);
-    }
+    // Legacy createNodeFromCsv function removed - CSV import now uses sophisticated UI via loadSessionNodes()
 
     // Helper method to extract node type from CSV data
     extractNodeType(csvNode) {
@@ -5152,43 +5448,10 @@ function insertComponent(componentType) {
     }
 }
 
-// Bridge function to add new node
+// Bridge function to add new node - redirects to sophisticated UI system
 function addNewNode() {
     if (!cmsInstance) return;
-
-    // Generate new node ID
-    cmsInstance.nodeCounter++;
-    const nodeId = `N${String(cmsInstance.nodeCounter).padStart(3, '0')}`;
-
-    // Create node element and add to sidebar
-    const nodeElement = document.createElement('div');
-    nodeElement.className = 'node-item';
-    nodeElement.dataset.nodeId = nodeId;
-    nodeElement.innerHTML = `
-        <div class="node-indicator"></div>
-        <div class="node-info">
-            <div class="node-id">${nodeId}</div>
-            <div class="node-title">${nodeId}</div>
-        </div>
-        <div class="node-status empty"></div>
-    `;
-
-    // Add click handler
-    nodeElement.addEventListener('click', () => cmsInstance.selectNode(nodeId));
-
-    // Add to DOM
-    cmsInstance.nodeList.appendChild(nodeElement);
-
-    // Call API to store node
-    fetch('/nodes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            node_id: nodeId,
-            title: `Node ${nodeId}`,
-            chapter_id: 'CH01'
-        })
-    }).catch(console.error);
+    return cmsInstance.addNewNode();
 }
 
 // Bridge function to select node
@@ -5197,13 +5460,15 @@ function selectNode(nodeId) {
     cmsInstance.selectNode(nodeId);
 }
 
-// Bridge function to delete current node
+// Bridge function to delete current node - rebuilds sophisticated UI after deletion
 function deleteCurrentNode() {
     if (!cmsInstance || !cmsInstance.selectedNode) return;
 
     const nodeElement = document.querySelector(`[data-node-id="${cmsInstance.selectedNode}"]`);
     if (nodeElement) {
         nodeElement.remove();
+        // Reload session nodes to rebuild sophisticated UI
+        cmsInstance.loadSessionNodes();
     }
 }
 
@@ -5304,4 +5569,7 @@ function testAISuggestionMode() {
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
     cmsInstance = new TemplateEditorCMS();
+    // Make globally accessible for enhanced node list editing
+    window.cmsApp = cmsInstance;
+    console.log('Enhanced node list functionality ready');
 });
