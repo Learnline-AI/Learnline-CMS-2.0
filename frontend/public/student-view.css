@@ -578,3 +578,59 @@ p {
         height: 80px;
     }
 }
+
+
+/* Three SVGs Component - Student View */
+.student-three-svgs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+    margin: 30px 0;
+}
+
+.student-svg-item {
+    text-align: center;
+}
+
+.student-svg-container {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    min-height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.student-svg-container svg {
+    max-width: 100%;
+    max-height: 220px;
+}
+
+.student-svg-placeholder {
+    color: #ccc;
+    font-size: 48px;
+}
+
+.student-svg-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.student-svg-description {
+    font-size: 15px;
+    color: #666;
+    line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+    .student-three-svgs {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}
+

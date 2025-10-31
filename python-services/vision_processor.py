@@ -1085,9 +1085,8 @@ Return ONLY valid JSON with this exact structure:
                         page_result["processing_notes"] = f"Component sequence analysis completed for page {current_page}"
 
                     page_responses.append(page_result)
-                    
-                    # Clean up memory - delete image object
-                    del image
+
+                    # Memory cleanup happens inside _call_vision_api_with_retry method
                     
                     # Send page completion progress update
                     if progress_callback:

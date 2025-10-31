@@ -1,5 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -53,10 +54,44 @@ else:
     CLAUDE_AVAILABLE = False
     print("Warning: ANTHROPIC_API_KEY not found. Claude features will be disabled.")
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan handler for startup and shutdown"""
+    # Startup sequence
+    logger.info("Starting application...")
+
+    if db_manager:
+        try:
+            await db_manager.initialize()
+            await db_manager.ensure_schema()
+            logger.info("Database initialization completed successfully")
+        except Exception as e:
+            logger.error(f"Database initialization failed: {str(e)}")
+            # App still starts - just log the error
+    else:
+        logger.warning("Database manager not available")
+
+    logger.info("Application startup complete")
+
+    yield  # Application runs
+
+    # Shutdown sequence
+    logger.info("Shutting down application...")
+
+    if db_manager:
+        try:
+            await db_manager.close()
+            logger.info("Database connections closed")
+        except Exception as e:
+            logger.error(f"Error during database shutdown: {str(e)}")
+
+    logger.info("Application shutdown complete")
+
 app = FastAPI(
     title="Educational CMS PDF Processor",
     description="AI-powered PDF content extraction and classification service",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 app.add_middleware(
@@ -104,6 +139,38 @@ class ContentCreate(BaseModel):
 
 class ContentResponse(ContentCreate):
     node_id: str
+
+# Position Models
+class PositionData(BaseModel):
+    x: float
+    y: float
+
+class PositionsUpdate(BaseModel):
+    positions: Dict[str, PositionData]
+
+# Relationship Models
+class RelationshipCreate(BaseModel):
+    from_node_id: str
+    to_node_id: str
+    relationship_type: str = "LEADS_TO"
+    explanation: str = ""
+    created_by: str = "USER"
+    confidence_score: float = 1.0
+
+class RelationshipUpdate(BaseModel):
+    relationship_type: Optional[str] = None
+    explanation: Optional[str] = None
+    confidence_score: Optional[float] = None
+
+class RelationshipResponse(BaseModel):
+    id: int
+    from_node_id: str
+    to_node_id: str
+    relationship_type: str
+    explanation: str
+    created_by: str
+    confidence_score: float
+    created_at: str
 
 # Component Sequence Models
 class ComponentItem(BaseModel):
@@ -209,8 +276,8 @@ async def create_session():
         if session_id:
             return {
                 "session_id": session_id,
-                "expires_in_hours": 36,
-                "message": "Session created successfully"
+                "expires_in_hours": None,
+                "message": "Permanent session created successfully"
             }
         else:
             raise HTTPException(status_code=500, detail="Failed to create session")
@@ -258,12 +325,12 @@ async def get_session_nodes(session_id: str):
     try:
         if not db_manager:
             raise HTTPException(status_code=500, detail="Database not available")
-        
+
         # Validate session first
         is_valid = await db_manager.validate_session(session_id)
         if not is_valid:
             raise HTTPException(status_code=401, detail="Invalid or expired session")
-        
+
         nodes = await db_manager.get_session_nodes(session_id)
         return {"session_id": session_id, "nodes": nodes, "total": len(nodes)}
     except HTTPException:
@@ -271,6 +338,178 @@ async def get_session_nodes(session_id: str):
     except Exception as e:
         logger.error(f"Error getting session nodes: {str(e)}")
         raise HTTPException(status_code=500, detail="Error fetching session nodes")
+
+@app.post("/session/{session_id}/nodes")
+async def create_session_node(session_id: str, node_data: dict):
+    """Create a new node in a session"""
+    try:
+        if not db_manager:
+            raise HTTPException(status_code=500, detail="Database not available")
+
+        # Validate session first
+        is_valid = await db_manager.validate_session(session_id)
+        if not is_valid:
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+        # Validate required fields
+        if "node_id" not in node_data:
+            raise HTTPException(status_code=400, detail="node_id is required")
+
+        # Check if node already exists in this session
+        existing_nodes = await db_manager.get_session_nodes(session_id)
+        if any(node["node_id"] == node_data["node_id"] for node in existing_nodes):
+            raise HTTPException(status_code=400, detail=f"Node {node_data['node_id']} already exists in this session")
+
+        success = await db_manager.create_session_node(session_id, node_data)
+        if success:
+            return {"success": True, "message": f"Node {node_data['node_id']} created successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to create session node")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating session node: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error creating session node")
+
+@app.get("/session/{session_id}/relationships")
+async def get_session_relationships(session_id: str):
+    """Get all relationships for a specific session"""
+    try:
+        if not db_manager:
+            raise HTTPException(status_code=500, detail="Database not available")
+
+        # Validate session first
+        is_valid = await db_manager.validate_session(session_id)
+        if not is_valid:
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+        relationships = await db_manager.get_session_relationships(session_id)
+        return {"session_id": session_id, "relationships": relationships, "total": len(relationships)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting session relationships: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error fetching session relationships")
+
+@app.post("/session/{session_id}/relationships/bulk")
+async def bulk_create_session_relationships(session_id: str, relationships_data: dict):
+    """Create multiple relationships in a session (for CSV import)"""
+    try:
+        if not db_manager:
+            raise HTTPException(status_code=500, detail="Database not available")
+
+        # Validate session first
+        is_valid = await db_manager.validate_session(session_id)
+        if not is_valid:
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+        # Validate required field
+        if "relationships" not in relationships_data:
+            raise HTTPException(status_code=400, detail="relationships array is required")
+
+        relationships = relationships_data["relationships"]
+        success = await db_manager.bulk_create_relationships(session_id, relationships)
+
+        if success:
+            return {"success": True, "message": f"Created {len(relationships)} relationships successfully", "count": len(relationships)}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to create relationships")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error bulk creating relationships: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error creating relationships")
+
+@app.post("/session/{session_id}/relationships")
+async def create_session_relationship(session_id: str, relationship: RelationshipCreate):
+    """Create a single relationship in a session"""
+    try:
+        if not db_manager:
+            raise HTTPException(status_code=500, detail="Database not available")
+
+        # Validate session first
+        is_valid = await db_manager.validate_session(session_id)
+        if not is_valid:
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+        # Create relationship data
+        relationship_data = {
+            "from": relationship.from_node_id,
+            "to": relationship.to_node_id,
+            "type": relationship.relationship_type,
+            "explanation": relationship.explanation,
+            "created_by": relationship.created_by,
+            "confidence_score": relationship.confidence_score
+        }
+
+        success = await db_manager.create_session_relationship(session_id, relationship_data)
+        if success:
+            return {"success": True, "message": "Relationship created successfully", "relationship": relationship_data}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to create relationship")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating relationship: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error creating relationship")
+
+@app.delete("/session/{session_id}/relationships/{relationship_id}")
+async def delete_session_relationship(session_id: str, relationship_id: int):
+    """Delete a specific relationship in a session"""
+    try:
+        if not db_manager:
+            raise HTTPException(status_code=500, detail="Database not available")
+
+        # Validate session first
+        is_valid = await db_manager.validate_session(session_id)
+        if not is_valid:
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+        success = await db_manager.delete_session_relationship(session_id, relationship_id)
+        if success:
+            return {"success": True, "message": f"Relationship {relationship_id} deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Relationship not found or failed to delete")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting relationship: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error deleting relationship")
+
+@app.put("/session/{session_id}/relationships/{relationship_id}")
+async def update_session_relationship(session_id: str, relationship_id: int, relationship_update: RelationshipUpdate):
+    """Update a specific relationship in a session"""
+    try:
+        if not db_manager:
+            raise HTTPException(status_code=500, detail="Database not available")
+
+        # Validate session first
+        is_valid = await db_manager.validate_session(session_id)
+        if not is_valid:
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+        # Build update data (only include non-None fields)
+        update_data = {}
+        if relationship_update.relationship_type is not None:
+            update_data["relationship_type"] = relationship_update.relationship_type
+        if relationship_update.explanation is not None:
+            update_data["explanation"] = relationship_update.explanation
+        if relationship_update.confidence_score is not None:
+            update_data["confidence_score"] = relationship_update.confidence_score
+
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        success = await db_manager.update_session_relationship(session_id, relationship_id, update_data)
+        if success:
+            return {"success": True, "message": f"Relationship {relationship_id} updated successfully", "updated_fields": list(update_data.keys())}
+        else:
+            raise HTTPException(status_code=404, detail="Relationship not found or failed to update")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating relationship: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error updating relationship")
 
 @app.post("/session/{session_id}/nodes/{node_id}/content")
 async def save_session_node_content(session_id: str, node_id: str, content: ContentCreate):
@@ -378,6 +617,69 @@ async def auto_save_node_content(session_id: str, node_id: str, content: dict):
     except Exception as e:
         logger.error(f"Auto-save error: {str(e)}")
         return {"status": "error", "message": "Auto-save failed"}
+
+@app.put("/session/{session_id}/positions")
+async def save_node_positions(session_id: str, positions_update: PositionsUpdate):
+    """Save node positions for a session"""
+    try:
+        if not db_manager:
+            raise HTTPException(status_code=500, detail="Database not available")
+
+        # Validate session first
+        is_valid = await db_manager.validate_session(session_id)
+        if not is_valid:
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+        # Convert PositionData objects to dict
+        positions_dict = {}
+        for node_id, position_data in positions_update.positions.items():
+            positions_dict[node_id] = {"x": position_data.x, "y": position_data.y}
+
+        # Save to database
+        success = await db_manager.save_session_positions(session_id, positions_dict)
+
+        if success:
+            return {
+                "status": "saved",
+                "message": "Positions saved successfully",
+                "session_id": session_id,
+                "nodes_saved": len(positions_dict)
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to save positions")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error saving positions: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.get("/session/{session_id}/positions")
+async def get_node_positions(session_id: str):
+    """Get node positions for a session"""
+    try:
+        if not db_manager:
+            raise HTTPException(status_code=500, detail="Database not available")
+
+        # Validate session first
+        is_valid = await db_manager.validate_session(session_id)
+        if not is_valid:
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+        # Load from database
+        positions = await db_manager.load_session_positions(session_id)
+
+        return {
+            "status": "success",
+            "session_id": session_id,
+            "positions": positions
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error loading positions: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/nodes")
 async def get_nodes():
@@ -743,7 +1045,7 @@ Return only the JSON, no other text."""
 
         # Call Claude
         message = claude_client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-3-5-sonnet-20240620",
             max_tokens=4000,
             messages=[{"role": "user", "content": prompt}]
         )

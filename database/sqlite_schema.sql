@@ -93,6 +93,20 @@ CREATE TABLE IF NOT EXISTS node_components (
     version INTEGER DEFAULT 1
 );
 
+-- Session Relationships table - Track node connections within sessions
+CREATE TABLE IF NOT EXISTS session_relationships (
+    id INTEGER PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    from_node_id TEXT NOT NULL,
+    to_node_id TEXT NOT NULL,
+    relationship_type TEXT NOT NULL DEFAULT 'LEADS_TO',
+    explanation TEXT DEFAULT '',
+    created_by TEXT DEFAULT 'CSV_IMPORT',
+    confidence_score REAL DEFAULT 1.0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(session_id, from_node_id, to_node_id, relationship_type)
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
@@ -101,3 +115,6 @@ CREATE INDEX IF NOT EXISTS idx_nodes_node_id ON nodes(node_id);
 CREATE INDEX IF NOT EXISTS idx_user_assignments_node_id ON user_assignments(node_id);
 CREATE INDEX IF NOT EXISTS idx_template_selections_node_id ON template_selections(node_id);
 CREATE INDEX IF NOT EXISTS idx_node_components_node_id ON node_components(node_id);
+CREATE INDEX IF NOT EXISTS idx_session_relationships_session_id ON session_relationships(session_id);
+CREATE INDEX IF NOT EXISTS idx_session_relationships_from_node ON session_relationships(from_node_id);
+CREATE INDEX IF NOT EXISTS idx_session_relationships_to_node ON session_relationships(to_node_id);

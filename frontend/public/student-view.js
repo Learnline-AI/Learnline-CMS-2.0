@@ -107,6 +107,9 @@ class StudentView {
             case 'three-pictures':
                 return this.renderPictures(params, 3);
 
+            case 'three-svgs':
+                return this.renderThreeSVGs(params);
+
             case 'two-pictures':
                 return this.renderPictures(params, 2);
 
@@ -258,6 +261,32 @@ class StudentView {
                 <p>${message}</p>
             </div>
         `;
+    }
+
+    renderThreeSVGs(params) {
+        let svgsHTML = '';
+
+        for (let i = 1; i <= 3; i++) {
+            const title = params[`title${i}`] || `SVG ${i}`;
+            const description = params[`description${i}`] || '';
+            const svgCode = params[`svg${i}`] || '';
+
+            const svgHTML = svgCode
+                ? svgCode
+                : `<div class="student-svg-placeholder"><i class="fas fa-shapes"></i></div>`;
+
+            svgsHTML += `
+                <div class="student-svg-item">
+                    <div class="student-svg-container">
+                        ${svgHTML}
+                    </div>
+                    <h3 class="student-svg-title">${title}</h3>
+                    <p class="student-svg-description">${description}</p>
+                </div>
+            `;
+        }
+
+        return `<div class="student-three-svgs">${svgsHTML}</div>`;
     }
 }
 

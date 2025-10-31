@@ -127,6 +127,10 @@
                                     <i class="fas fa-image"></i>
                                     <span>Three Pictures</span>
                                 </div>
+                                <div class="component-item" draggable="true" data-component-type="three-svgs">
+                                    <i class="fas fa-shapes"></i>
+                                    <span>Three SVGs</span>
+                                </div>
                                 <div class="component-item" draggable="true" data-component-type="two-pictures">
                                     <i class="fas fa-images"></i>
                                     <span>Two Pictures</span>
@@ -149,6 +153,7 @@
                         <button id="api-add-hero-number" onclick="insertComponent('hero-number')">Add Hero Number</button>
                         <button id="api-add-four-pictures" onclick="insertComponent('four-pictures')">Add Four Pictures</button>
                         <button id="api-add-three-pictures" onclick="insertComponent('three-pictures')">Add Three Pictures</button>
+                        <button id="api-add-three-svgs" onclick="insertComponent('three-svgs')">Add Three SVGs</button>
                         <button id="api-add-two-pictures" onclick="insertComponent('two-pictures')">Add Two Pictures</button>
 
                         <!-- Node Management Buttons -->
@@ -170,32 +175,75 @@
                     <!-- Left Panel - Node Navigation -->
                     <div id="node-navigation-panel" class="editor-panel">
                         <div class="panel-header">
-                            <button class="toggle-panel-btn" id="toggle-nodes-btn" title="Collapse panel">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                            <h3>Nodes</h3>
-                            <button class="add-node-btn" id="add-node-btn">
-                                <i class="fas fa-plus"></i>
-                                Add Node
-                            </button>
+                            <div class="header-left">
+                                <button class="toggle-panel-btn" id="toggle-nodes-btn" title="Collapse panel">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <button class="view-mode-toggle-btn" id="view-mode-toggle-btn" title="Switch to visual view">
+                                    <i class="fas fa-project-diagram"></i>
+                                </button>
+                                <h3>Nodes</h3>
+                                <button class="add-node-btn" id="add-node-btn">
+                                    <i class="fas fa-plus"></i>
+                                    Add Node
+                                </button>
+                                <button class="import-csv-btn" id="import-csv-btn">
+                                    <i class="fas fa-file-csv"></i>
+                                    Import CSV
+                                </button>
+                            </div>
+                            <div class="header-actions">
+                            </div>
+                            <input type="file" id="csv-file-input" accept=".csv" multiple style="display: none;">
                         </div>
                         <div class="node-list" id="node-list">
-                            <div class="node-item active" data-node-id="N001">
-                                <div class="node-indicator"></div>
-                                <div class="node-info">
-                                    <div class="node-id">N001</div>
-                                    <div class="node-title">N001</div>
-                                </div>
-                                <div class="node-status empty"></div>
+                            <!-- Nodes will be loaded dynamically from session -->
+                        </div>
+                        <div class="visual-network-container" id="visual-network-container" style="display: none;">
+                            <div class="visual-controls">
+                                <button class="visual-control-btn" id="zoom-in-btn" title="Zoom In">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                <button class="visual-control-btn" id="zoom-out-btn" title="Zoom Out">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <button class="visual-control-btn" id="reset-view-btn" title="Reset View">
+                                    <i class="fas fa-home"></i>
+                                </button>
+                                <button class="visual-control-btn" id="position-mode-btn" title="Toggle node positioning mode">
+                                    <i class="fas fa-arrows-alt"></i>
+                                </button>
+                                <button class="visual-control-btn" id="save-positions-btn" title="Save node positions">
+                                    <i class="fas fa-save"></i>
+                                </button>
                             </div>
-                            <div class="node-item" data-node-id="N002">
-                                <div class="node-indicator"></div>
-                                <div class="node-info">
-                                    <div class="node-id">N002</div>
-                                    <div class="node-title">Adding Fractions</div>
-                                </div>
-                                <div class="node-status empty"></div>
-                            </div>
+                            <svg id="visual-network-svg" class="visual-network-svg" width="100%" height="100%">
+                                <defs>
+                                    <!-- Arrowhead for LEADS_TO relationships -->
+                                    <marker id="arrow-leads-to" markerWidth="10" markerHeight="7"
+                                            refX="9" refY="3.5" orient="auto">
+                                        <polygon points="0 0, 10 3.5, 0 7" fill="#007AFF" />
+                                    </marker>
+                                    <!-- Arrowhead for prerequisite relationships -->
+                                    <marker id="arrow-prerequisite" markerWidth="10" markerHeight="7"
+                                            refX="9" refY="3.5" orient="auto">
+                                        <polygon points="0 0, 10 3.5, 0 7" fill="#FF6B6B" />
+                                    </marker>
+                                    <!-- Arrowhead for enrichment relationships -->
+                                    <marker id="arrow-enrichment" markerWidth="10" markerHeight="7"
+                                            refX="9" refY="3.5" orient="auto">
+                                        <polygon points="0 0, 10 3.5, 0 7" fill="#51CF66" />
+                                    </marker>
+                                    <!-- Generic arrowhead -->
+                                    <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                                            refX="9" refY="3.5" orient="auto">
+                                        <polygon points="0 0, 10 3.5, 0 7" fill="#8E8E93" />
+                                    </marker>
+                                </defs>
+                                <g id="network-content" transform="translate(0,0) scale(1)">
+                                    <!-- Network nodes and connections will be added dynamically -->
+                                </g>
+                            </svg>
                         </div>
                     </div>
 

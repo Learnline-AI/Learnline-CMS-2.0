@@ -2,9 +2,9 @@
 class TemplateEditorCMS {
     constructor() {
         this.apiBaseUrl = 'http://localhost:8000';
-        this.selectedNode = 'N001';
+        this.selectedNode = null; // Will be set from loaded session nodes
         this.draggedComponent = null;
-        this.nodeCounter = 2; // Start at 2 since we have N001 and N002
+        this.nodeCounter = 0; // Will be calculated from loaded session nodes
         this.selectedComponentColor = 'neutral'; // Default component color
 
         // Drag and drop reordering state
@@ -50,22 +50,29 @@ class TemplateEditorCMS {
         this.visualNodes = new Map(); // nodeId -> VisualNode instance
         this.nodeConnections = new Map(); // nodeId -> array of connected nodeIds
 
+        // Relationship data - Initialize as empty array to prevent race conditions
+        this.relationships = []; // Will be populated from database during session loading
+
         // Session and Auto-Save state
         this.sessionId = null;
         this.autoSaveTimeout = null;
         this.lastSaved = null;
         this.saveStatus = 'idle'; // idle, saving, saved, error
+        this.sessionReadyPromise = null; // Track session readiness
 
         this.initializeElements();
         this.bindEvents();
         this.initializeTextFormatting();
         this.updatePreview();
 
-        // Initialize session asynchronously
-        this.initializeSession().then(() => {
+        // Initialize session asynchronously and store promise
+        this.sessionReadyPromise = this.initializeSession().then(async () => {
             console.log('Session initialization completed');
+            // Restore view mode state AFTER session loading completes
+            await this.restoreViewModeState();
         }).catch(error => {
             console.error('Session initialization failed:', error);
+            throw error; // Re-throw to maintain promise chain
         });
     }
 
@@ -124,6 +131,7 @@ class TemplateEditorCMS {
         this.zoomOutBtn = document.getElementById('zoom-out-btn');
         this.resetViewBtn = document.getElementById('reset-view-btn');
         this.positionModeBtn = document.getElementById('position-mode-btn');
+        this.savePositionsBtn = document.getElementById('save-positions-btn');
 
         // Selection tracking
         this.selectedComponent = null;
@@ -132,7 +140,7 @@ class TemplateEditorCMS {
 
     bindEvents() {
         // Node navigation events
-        this.addNodeBtn.addEventListener('click', () => this.addNewNode());
+        this.addNodeBtn.addEventListener('click', async () => await this.addNewNode());
         this.nodeList.addEventListener('click', (e) => this.handleNodeClick(e));
 
         // CSV import events
@@ -184,7 +192,7 @@ class TemplateEditorCMS {
 
         // View mode toggle events
         if (this.viewModeToggleBtn) {
-            this.viewModeToggleBtn.addEventListener('click', () => this.toggleViewMode());
+            this.viewModeToggleBtn.addEventListener('click', async () => await this.toggleViewMode());
         }
 
         // Visual network control events
@@ -199,6 +207,9 @@ class TemplateEditorCMS {
         }
         if (this.positionModeBtn) {
             this.positionModeBtn.addEventListener('click', () => this.togglePositioningMode());
+        }
+        if (this.savePositionsBtn) {
+            this.savePositionsBtn.addEventListener('click', async () => await this.saveNodePositions());
         }
 
         // Visual network pan events
@@ -220,32 +231,60 @@ class TemplateEditorCMS {
         this.restoreNodePanelState();
 
         // Restore view mode state from localStorage
-        this.restoreViewModeState();
+        // View mode state will be restored after session loading completes
     }
 
     // Node Navigation Methods
-    addNewNode() {
+    async addNewNode() {
+        await this.ensureSessionReady();
+
         this.nodeCounter++;
         const nodeId = `N${String(this.nodeCounter).padStart(3, '0')}`;
 
-        const nodeItem = document.createElement('div');
-        nodeItem.className = 'node-item';
-        nodeItem.dataset.nodeId = nodeId;
-        nodeItem.innerHTML = `
-            <div class="node-indicator"></div>
-            <div class="node-info">
-                <div class="node-id">${nodeId}</div>
-                <div class="node-title">${nodeId}</div>
-            </div>
-            <div class="node-status empty"></div>
-        `;
+        // Create session node first
+        const sessionNodeData = {
+            node_id: nodeId,
+            title: nodeId,
+            raw_content: "",
+            chapter_id: 1
+        };
 
-        this.nodeList.appendChild(nodeItem);
-        this.selectNode(nodeId);
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/session/${this.sessionId}/nodes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(sessionNodeData)
+            });
 
-        // Update visual network if in visual mode
-        if (this.viewMode === 'visual') {
-            this.initializeVisualNetwork();
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Failed to create session node: ${errorData.detail || 'Unknown error'}`);
+            }
+
+            // Create DOM element for the new session node
+            const sessionNode = {
+                node_id: nodeId,
+                title: nodeId,
+                raw_content: "",
+                chapter_id: 1
+            };
+            this.createSessionNodeElement(sessionNode, 0);
+
+            this.selectNode(nodeId);
+
+            // Update visual network if in visual mode
+            if (this.viewMode === 'visual') {
+                await this.initializeVisualNetwork();
+            }
+
+            console.log(`Successfully created new node: ${nodeId}`);
+        } catch (error) {
+            console.error('Failed to create new node:', error);
+            alert(`Failed to create new node: ${error.message}`);
+            // Revert counter on failure
+            this.nodeCounter--;
         }
     }
 
@@ -2426,12 +2465,12 @@ class TemplateEditorCMS {
     }
 
     // View Mode Management Methods
-    toggleViewMode() {
+    async toggleViewMode() {
         // Toggle state
         this.viewMode = this.viewMode === 'list' ? 'visual' : 'list';
 
         // Update the UI
-        this.updateViewMode();
+        await this.updateViewMode();
 
         // Save state to localStorage
         localStorage.setItem('viewMode', this.viewMode);
@@ -2439,7 +2478,7 @@ class TemplateEditorCMS {
         console.log(`View mode switched to: ${this.viewMode}`);
     }
 
-    updateViewMode() {
+    async updateViewMode() {
         const editorLayout = document.querySelector('.editor-layout');
         const nodeList = document.getElementById('node-list');
 
@@ -2449,8 +2488,11 @@ class TemplateEditorCMS {
             nodeList.style.display = 'none';
             this.visualNetworkContainer.style.display = 'flex';
 
-            // Initialize visual network with current data
-            this.initializeVisualNetwork();
+            // Ensure session is ready before initializing visual network
+            await this.ensureSessionReady();
+
+            // Initialize visual network with current data (now async)
+            await this.initializeVisualNetwork();
 
             // Update button appearance
             this.viewModeToggleBtn.innerHTML = '<i class="fas fa-list"></i>';
@@ -2469,14 +2511,107 @@ class TemplateEditorCMS {
         }
     }
 
-    restoreViewModeState() {
+    async restoreViewModeState() {
         // Check localStorage for saved view mode state
         const savedViewMode = localStorage.getItem('viewMode');
 
         if (savedViewMode && savedViewMode === 'visual') {
             this.viewMode = 'visual';
-            this.updateViewMode();
+            await this.updateViewMode();
         }
+    }
+
+    // Node Position Management Methods
+    async saveNodePositions() {
+        try {
+            await this.ensureSessionReady();
+
+            const positions = {};
+            this.visualNodes.forEach((node, nodeId) => {
+                positions[nodeId] = {
+                    x: node.position.x,
+                    y: node.position.y
+                };
+            });
+
+            const response = await fetch(`${this.apiBaseUrl}/session/${this.sessionId}/positions`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ positions })
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.status === 'saved') {
+                console.log('Node positions saved to database:', positions);
+                this.showLayoutFeedback('Positions saved!', 'success');
+                return true;
+            } else {
+                throw new Error(result.message || 'Failed to save positions');
+            }
+        } catch (error) {
+            console.error('Failed to save positions:', error);
+            this.showLayoutFeedback('Save failed', 'error');
+            return false;
+        }
+    }
+
+    async loadNodePositions() {
+        try {
+            await this.ensureSessionReady();
+
+            const response = await fetch(`${this.apiBaseUrl}/session/${this.sessionId}/positions`);
+            const result = await response.json();
+
+            if (response.ok && result.status === 'success') {
+                console.log('Node positions loaded from database:', result.positions);
+                return result.positions || {};
+            } else {
+                console.log('No saved positions found or error loading positions');
+                return {};
+            }
+        } catch (error) {
+            console.error('Failed to load positions:', error);
+            return {};
+        }
+    }
+
+    // Layout Management Methods
+    collectCurrentPositions() {
+        const positions = {};
+        this.visualNodes.forEach((node, nodeId) => {
+            positions[nodeId] = { x: node.position.x, y: node.position.y };
+        });
+        return positions;
+    }
+
+    resetToDefaultLayout() {
+        const nodeData = Array.from(document.querySelectorAll('.node-item')).map((el, index) => ({
+            nodeId: el.getAttribute('data-node-id')
+        }));
+
+        nodeData.forEach((data, index) => {
+            const position = this.calculateGridPosition(index, nodeData.length);
+            const node = this.visualNodes.get(data.nodeId);
+            if (node) {
+                node.updatePosition(position.x, position.y);
+            }
+        });
+
+        this.showLayoutFeedback('Layout reset to default', 'success');
+    }
+
+    showLayoutFeedback(message, type) {
+        const feedback = document.createElement('div');
+        feedback.textContent = message;
+        feedback.style.cssText = `
+            position: fixed; top: 70px; right: 10px; padding: 8px 12px; border-radius: 4px;
+            font-size: 12px; z-index: 1000; pointer-events: none;
+            background: ${type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#2196f3'};
+            color: white; animation: fadeInOut 2s ease-in-out;
+        `;
+        document.body.appendChild(feedback);
+        setTimeout(() => feedback.remove(), 2000);
     }
 
     // Visual Network Zoom/Pan Methods
@@ -2643,7 +2778,7 @@ class TemplateEditorCMS {
     }
 
     // Initialize visual network
-    initializeVisualNetwork() {
+    async initializeVisualNetwork() {
         if (!this.networkContent) return;
 
         // Clear existing nodes
@@ -2683,23 +2818,143 @@ class TemplateEditorCMS {
             });
         });
 
-        // Create visual nodes
-        nodeData.forEach((data, index) => {
-            const position = this.calculateGridPosition(index, nodeData.length);
-            const visualNode = new this.VisualNode(data, position, this);
+        // Load saved positions (now async and session-aware)
+        const savedPositions = await this.loadNodePositions();
 
-            this.visualNodes.set(data.nodeId, visualNode);
-            this.networkContent.appendChild(visualNode.elements.group);
-        });
+        // Comprehensive readiness validation before progressive rendering
+        const isReady = await this.validateVisualizationReadiness(nodeData, savedPositions);
+        if (!isReady) {
+            console.log('❌ Visual network initialization failed readiness validation - falling back to list mode');
+            return; // Graceful fallback to list mode
+        }
+
+        // Create visual nodes with async batching to prevent browser hang
+        await this.createVisualNodesBatched(nodeData, savedPositions);
+
+        // Refresh relationships from database to ensure latest data
+        await this.loadSessionRelationships();
 
         // Set up connections based on available data
-        this.setupConnections(nodeData);
+        await this.setupConnections(nodeData);
     }
 
     getStatusFromClass(className) {
         if (className.includes('complete')) return 'complete';
         if (className.includes('draft')) return 'draft';
         return 'empty';
+    }
+
+    // Progressive visual node creation with educational priority
+    async createVisualNodesBatched(nodeData, savedPositions) {
+        const BATCH_SIZE = 10; // Nodes per frame to prevent browser hang
+
+        // Educational Priority: Sort nodes to render selected/core nodes first
+        const prioritizedNodes = this.prioritizeNodesForEducation(nodeData);
+
+        console.log(`Creating ${prioritizedNodes.length} visual nodes in batches of ${BATCH_SIZE}`);
+
+        for (let i = 0; i < prioritizedNodes.length; i += BATCH_SIZE) {
+            const batch = prioritizedNodes.slice(i, i + BATCH_SIZE);
+
+            // Process batch in single frame
+            batch.forEach((data, batchIndex) => {
+                const globalIndex = i + batchIndex;
+                const savedPosition = savedPositions[data.nodeId];
+                const position = savedPosition || this.calculateGridPosition(globalIndex, prioritizedNodes.length);
+                const visualNode = new this.VisualNode(data, position, this);
+
+                this.visualNodes.set(data.nodeId, visualNode);
+                this.networkContent.appendChild(visualNode.elements.group);
+            });
+
+            // Yield control to browser between batches
+            if (i + BATCH_SIZE < prioritizedNodes.length) {
+                await this.nextFrame();
+            }
+        }
+
+        console.log(`✅ Created ${this.visualNodes.size} visual nodes with educational priority`);
+    }
+
+    // Educational node prioritization for optimal learning workflow
+    prioritizeNodesForEducation(nodeData) {
+        const prioritized = [...nodeData];
+
+        // Priority 1: Currently selected node (educational continuity)
+        prioritized.sort((a, b) => {
+            if (a.nodeId === this.selectedNode) return -1;
+            if (b.nodeId === this.selectedNode) return 1;
+
+            // Priority 2: Core learning path (N001, N002, N003...)
+            const aIsCore = a.nodeId.match(/^N\d+$/);
+            const bIsCore = b.nodeId.match(/^N\d+$/);
+            if (aIsCore && !bIsCore) return -1;
+            if (!aIsCore && bIsCore) return 1;
+
+            // Priority 3: Maintain original order for same priority
+            return 0;
+        });
+
+        return prioritized;
+    }
+
+    // RequestAnimationFrame helper for non-blocking operations
+    nextFrame() {
+        return new Promise(resolve => requestAnimationFrame(resolve));
+    }
+
+    // Comprehensive readiness validation with fail-fast retry
+    async validateVisualizationReadiness(nodeData, savedPositions, retryCount = 0) {
+        const MAX_RETRIES = 1;
+        const RETRY_DELAY = 100; // ms
+
+        console.log(`🔍 Validating visualization readiness (attempt ${retryCount + 1})`);
+
+        // Gate 1: DOM Readiness
+        if (!this.networkContent || !this.networkContent.isConnected) {
+            console.log('❌ DOM Gate: Network container not ready');
+            return this.retryValidation(nodeData, savedPositions, retryCount, MAX_RETRIES, RETRY_DELAY);
+        }
+
+        // Gate 2: Data Completeness
+        if (!nodeData || nodeData.length === 0) {
+            console.log('❌ Data Gate: No node data extracted');
+            return this.retryValidation(nodeData, savedPositions, retryCount, MAX_RETRIES, RETRY_DELAY);
+        }
+
+        // Gate 3: Clean State
+        if (this.visualNodes.size > 0) {
+            console.log('❌ State Gate: Previous visual nodes not fully cleared');
+            this.clearVisualNetwork(); // Force clear
+            return this.retryValidation(nodeData, savedPositions, retryCount, MAX_RETRIES, RETRY_DELAY);
+        }
+
+        // Gate 4: Browser Environment
+        if (typeof requestAnimationFrame === 'undefined') {
+            console.log('❌ Browser Gate: RequestAnimationFrame not available');
+            return false; // No retry for browser environment issues
+        }
+
+        // Gate 5: Session Data Integrity
+        if (!this.sessionId) {
+            console.log('❌ Session Gate: No valid session ID');
+            return this.retryValidation(nodeData, savedPositions, retryCount, MAX_RETRIES, RETRY_DELAY);
+        }
+
+        console.log('✅ All readiness gates passed - proceeding with visualization');
+        return true;
+    }
+
+    // Retry helper with delay
+    async retryValidation(nodeData, savedPositions, retryCount, maxRetries, delay) {
+        if (retryCount < maxRetries) {
+            console.log(`⏳ Retrying validation in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return this.validateVisualizationReadiness(nodeData, savedPositions, retryCount + 1);
+        }
+
+        console.log('❌ Max retries exceeded - visualization readiness validation failed');
+        return false;
     }
 
     // Enhanced status detection that checks the actual DOM structure
@@ -2752,7 +3007,7 @@ class TemplateEditorCMS {
         }
     }
 
-    setupConnections(nodeData) {
+    async setupConnections(nodeData) {
         console.log('=== SETUP CONNECTIONS DEBUGGING ===');
         console.log(`Visual nodes in network: ${this.visualNodes.size}`);
         console.log(`Relationships available: ${this.relationships ? this.relationships.length : 'NONE'}`);
@@ -2767,7 +3022,7 @@ class TemplateEditorCMS {
             this.relationships.forEach((rel, index) => {
                 console.log(`  ${index + 1}. ${rel.from} --[${rel.type}]--> ${rel.to}`);
             });
-            this.setupRelationshipConnections();
+            await this.setupRelationshipConnections();
         } else {
             console.log('❌ NO RELATIONSHIPS - Using sequential connections');
             if (!this.relationships) {
@@ -2881,7 +3136,7 @@ class TemplateEditorCMS {
         return `M ${x1},${y1} Q ${offsetX},${offsetY} ${x2},${y2}`;
     }
 
-    setupRelationshipConnections() {
+    async setupRelationshipConnections() {
         console.log('=== RELATIONSHIP CONNECTION DEBUGGING ===');
         console.log(`Total relationships to process: ${this.relationships.length}`);
         console.log('Available visual nodes:', Array.from(this.visualNodes.keys()));
@@ -2896,24 +3151,39 @@ class TemplateEditorCMS {
         let successfulConnections = 0;
         let failedConnections = 0;
 
-        this.relationships.forEach((rel, index) => {
-            console.log(`Relationship ${index + 1}: ${rel.from} --[${rel.type}]--> ${rel.to}`);
+        // Process relationships in chunks to prevent browser hang
+        const RELATIONSHIP_BATCH_SIZE = 5;
 
-            const fromNode = this.visualNodes.get(rel.from);
-            const toNode = this.visualNodes.get(rel.to);
+        for (let i = 0; i < this.relationships.length; i += RELATIONSHIP_BATCH_SIZE) {
+            const batch = this.relationships.slice(i, i + RELATIONSHIP_BATCH_SIZE);
 
-            if (fromNode && toNode) {
-                const style = relationshipStyles[rel.type] || relationshipStyles['LEADS_TO'];
-                this.createStyledConnection(fromNode, toNode, style, rel.explanation);
-                successfulConnections++;
-                console.log(`  ✅ SUCCESS: Created ${rel.type} connection`);
-            } else {
-                failedConnections++;
-                console.log(`  ❌ FAILED: Missing nodes - fromNode: ${!!fromNode}, toNode: ${!!toNode}`);
-                if (!fromNode) console.log(`    Missing fromNode for ID: "${rel.from}"`);
-                if (!toNode) console.log(`    Missing toNode for ID: "${rel.to}"`);
+            // Process batch synchronously within single frame
+            batch.forEach((rel, batchIndex) => {
+                const globalIndex = i + batchIndex + 1;
+                console.log(`Relationship ${globalIndex}: ${rel.from} --[${rel.type}]--> ${rel.to}`);
+
+                const fromNode = this.visualNodes.get(rel.from);
+                const toNode = this.visualNodes.get(rel.to);
+
+                if (fromNode && toNode) {
+                    const style = relationshipStyles[rel.type] || relationshipStyles['LEADS_TO'];
+                    this.createStyledConnection(fromNode, toNode, style, rel.explanation);
+                    successfulConnections++;
+                    console.log(`  ✅ SUCCESS: Created ${rel.type} connection`);
+                } else {
+                    failedConnections++;
+                    console.log(`  ❌ FAILED: Missing nodes - fromNode: ${!!fromNode}, toNode: ${!!toNode}`);
+                    if (!fromNode) console.log(`    Missing fromNode for ID: "${rel.from}"`);
+                    if (!toNode) console.log(`    Missing toNode for ID: "${rel.to}"`);
+                }
+            });
+
+            // Yield control to browser between batches
+            if (i + RELATIONSHIP_BATCH_SIZE < this.relationships.length) {
+                await this.nextFrame();
+                console.log(`📊 Processed ${Math.min(i + RELATIONSHIP_BATCH_SIZE, this.relationships.length)}/${this.relationships.length} relationships`);
             }
-        });
+        }
 
         console.log(`=== CONNECTION SUMMARY ===`);
         console.log(`Successful connections: ${successfulConnections}`);
@@ -3394,7 +3664,7 @@ class TemplateEditorCMS {
             this.parent.batchUpdateConnections(this.nodeId);
         }
 
-        endNodeDrag(e) {
+        async endNodeDrag(e) {
             if (!this.isDragging) return;
 
             this.isDragging = false;
@@ -3409,6 +3679,9 @@ class TemplateEditorCMS {
 
             // Ensure scaling is reset to baseline
             this.scaleShape(1);
+
+            // Save node positions after drag ends
+            await this.parent.saveNodePositions();
         }
 
         constrainPosition(x, y) {
@@ -4089,25 +4362,37 @@ class TemplateEditorCMS {
     async initializeSession() {
         // Check for existing session in localStorage
         const existingSessionId = localStorage.getItem('cms_session_id');
-        
+
         if (existingSessionId) {
             // Validate existing session
             try {
                 const response = await fetch(`${this.apiBaseUrl}/session/validate/${existingSessionId}`);
                 const result = await response.json();
-                
+
                 if (result.valid) {
                     this.sessionId = existingSessionId;
                     console.log('Resumed existing session:', this.sessionId);
+                    // Load session data independently (parallel loading)
+                    await Promise.allSettled([
+                        this.loadSessionNodes(),
+                        this.loadSessionRelationships()
+                    ]);
                     return;
                 }
             } catch (e) {
                 console.log('Session validation failed, creating new session');
             }
         }
-        
+
         // Create new session
         await this.createNewSession();
+        // Load session data independently after session creation
+        if (this.sessionId) {
+            await Promise.allSettled([
+                this.loadSessionNodes(),
+                this.loadSessionRelationships()
+            ]);
+        }
     }
 
     async createNewSession() {
@@ -4125,6 +4410,172 @@ class TemplateEditorCMS {
         } catch (e) {
             console.error('Failed to create session:', e);
         }
+    }
+
+    // Session Readiness Methods
+    async ensureSessionReady() {
+        // Wait for the session initialization promise
+        if (this.sessionReadyPromise) {
+            try {
+                await this.sessionReadyPromise;
+            } catch (error) {
+                console.error('Session initialization failed, attempting data recovery:', error);
+                // Try to recover session data instead of creating new session
+                if (this.sessionId) {
+                    console.log('Attempting to recover session data for existing session:', this.sessionId);
+                    await Promise.allSettled([
+                        this.loadSessionNodes(),
+                        this.loadSessionRelationships()
+                    ]);
+                    return; // Exit early if we have a session ID and attempted recovery
+                }
+            }
+        }
+
+        // If session is still not ready, try to create a new one
+        if (!this.sessionId) {
+            console.log('Session not ready, creating new session');
+            await this.createNewSession();
+            // Load data for new session
+            if (this.sessionId) {
+                await Promise.allSettled([
+                    this.loadSessionNodes(),
+                    this.loadSessionRelationships()
+                ]);
+            }
+        }
+
+        // Final check
+        if (!this.sessionId) {
+            throw new Error('Failed to establish session');
+        }
+    }
+
+    // Session Node Loading Methods
+    async loadSessionNodes() {
+        if (!this.sessionId) {
+            console.log('No session ID available for node loading');
+            return;
+        }
+
+        try {
+            console.log('Loading nodes from session:', this.sessionId);
+            const response = await fetch(`${this.apiBaseUrl}/session/${this.sessionId}/nodes`);
+            const result = await response.json();
+
+            if (response.ok && result.nodes && result.nodes.length > 0) {
+                console.log(`Found ${result.nodes.length} session nodes to load`);
+
+                // Create DOM elements for each session node
+                result.nodes.forEach((sessionNode, index) => {
+                    this.createSessionNodeElement(sessionNode, index);
+                });
+
+                // Calculate nodeCounter from highest node number
+                const nodeNumbers = result.nodes.map(node => {
+                    const match = node.node_id.match(/N(\d+)/);
+                    return match ? parseInt(match[1]) : 0;
+                });
+                this.nodeCounter = Math.max(...nodeNumbers);
+                console.log(`Set nodeCounter to ${this.nodeCounter} based on loaded nodes`);
+
+                // Set selectedNode to first node if none selected
+                if (!this.selectedNode && result.nodes.length > 0) {
+                    this.selectedNode = result.nodes[0].node_id;
+                    console.log(`Set selectedNode to ${this.selectedNode}`);
+
+                    // Make first node active in DOM
+                    const firstNodeElement = document.querySelector(`[data-node-id="${this.selectedNode}"]`);
+                    if (firstNodeElement) {
+                        firstNodeElement.classList.add('active');
+                    }
+                }
+
+                console.log('Session nodes loaded successfully');
+            } else {
+                console.log('No session nodes found or empty session');
+            }
+        } catch (error) {
+            console.error('Error loading session nodes:', error);
+            console.log('Session node loading failed, continuing with empty state but preserving session');
+            // Don't throw - preserve session and continue with empty state
+        }
+    }
+
+    async loadSessionRelationships() {
+        if (!this.sessionId) {
+            console.log('No session ID available for relationship loading');
+            return;
+        }
+
+        try {
+            console.log('Loading relationships from session:', this.sessionId);
+            const response = await fetch(`${this.apiBaseUrl}/session/${this.sessionId}/relationships`);
+            const result = await response.json();
+
+            if (response.ok && result.relationships && result.relationships.length > 0) {
+                console.log(`Found ${result.relationships.length} session relationships to load`);
+
+                // Transform database format to frontend format
+                this.relationships = result.relationships.map(dbRel => ({
+                    from: dbRel.from_node_id,
+                    to: dbRel.to_node_id,
+                    type: dbRel.relationship_type,
+                    explanation: dbRel.explanation || ''
+                }));
+
+                console.log(`✅ Loaded ${this.relationships.length} relationships from session`);
+            } else {
+                console.log('No session relationships found or empty session');
+                this.relationships = []; // Initialize empty array
+            }
+        } catch (error) {
+            console.error('Error loading session relationships:', error);
+            this.relationships = []; // Initialize empty on error
+            // Don't throw - relationships are optional for basic functionality
+        }
+    }
+
+    createSessionNodeElement(sessionNode, index) {
+        const nodeId = sessionNode.node_id;
+
+        // Check if node already exists in DOM to avoid duplicates
+        const existingNode = document.querySelector(`[data-node-id="${nodeId}"]`);
+        if (existingNode) {
+            console.log(`Node ${nodeId} already exists in DOM, skipping`);
+            return;
+        }
+
+        // Create node element using same structure as existing methods
+        const nodeElement = document.createElement('div');
+        nodeElement.className = 'node-item';
+        nodeElement.setAttribute('data-node-id', nodeId);
+
+        // Use session node data or fallbacks
+        const title = sessionNode.title || nodeId;
+        const status = this.getSessionNodeStatus(sessionNode);
+
+        nodeElement.innerHTML = `
+            <div class="node-indicator"></div>
+            <div class="node-info">
+                <div class="node-id">${nodeId}</div>
+                <div class="node-title">${title}</div>
+            </div>
+            <div class="node-status ${status}"></div>
+        `;
+
+        // Add to node list
+        this.nodeList.appendChild(nodeElement);
+
+        console.log(`Created DOM element for session node: ${nodeId}`);
+    }
+
+    getSessionNodeStatus(sessionNode) {
+        // Determine status based on session node data
+        if (sessionNode.content_count && sessionNode.content_count > 0) {
+            return 'draft'; // Has content
+        }
+        return 'empty'; // No content yet
     }
 
     // Auto-Save Methods
@@ -4310,23 +4761,35 @@ class TemplateEditorCMS {
         this.nodeList.innerHTML = '';
         this.nodeCounter = 1;
 
-        // Create nodes from CSV data
-        console.log('📝 Creating DOM nodes from CSV data...');
-        nodeData.forEach((csvNode, index) => {
-            this.createNodeFromCsv(csvNode, index);
-        });
-        console.log(`✅ Created ${nodeData.length} DOM nodes`);
+        // Create session nodes first (database persistence)
+        console.log('💾 Creating session nodes in database...');
+        await this.createSessionNodesFromCsv(nodeData);
+        console.log(`✅ Created ${nodeData.length} session nodes in database`);
+
+        // Then create DOM nodes using session node creation
+        console.log('📝 Creating DOM nodes from session data...');
+        await this.loadSessionNodes();
+        console.log(`✅ Created ${nodeData.length} DOM nodes from session`);
 
         // Build relationship data
         console.log('🔗 Processing relationships...');
         this.processRelationships(nodeData, relationshipData);
         console.log(`✅ Processed relationships: ${this.relationships ? this.relationships.length : 0} final relationships`);
 
+        // Persist relationships to database
+        if (this.relationships && this.relationships.length > 0) {
+            console.log('💾 Persisting relationships to database...');
+            await this.createSessionRelationshipsFromCsv();
+            console.log(`✅ Persisted ${this.relationships.length} relationships to database`);
+        } else {
+            console.log('ℹ️ No relationships to persist');
+        }
+
         // Rebuild visual network with new data
         console.log('🎨 Rebuilding visual network...');
         if (this.viewMode === 'visual') {
             console.log('  Mode: VISUAL - Initializing visual network');
-            this.initializeVisualNetwork();
+            await this.initializeVisualNetwork();
         } else {
             console.log('  Mode: LIST - Visual network not initialized');
         }
@@ -4398,6 +4861,131 @@ class TemplateEditorCMS {
 
         // Default fallback
         return 'core';
+    }
+
+    // Create session nodes from CSV data in database
+    async createSessionNodesFromCsv(nodeData) {
+        if (!this.sessionId) {
+            console.error('No session ID available for creating CSV nodes');
+            throw new Error('Session must be initialized before importing CSV nodes');
+        }
+
+        const creationPromises = nodeData.map(async (csvNode, index) => {
+            const nodeId = csvNode.node_id || `N${String(index + 1).padStart(3, '0')}`;
+            const title = csvNode.name || csvNode.title || nodeId;
+
+            // Extract metadata for database storage
+            const nodeType = this.extractNodeType(csvNode);
+            const difficulty = csvNode.difficulty ? parseInt(csvNode.difficulty) : null;
+            const timeMinutes = csvNode.time_minutes ? parseInt(csvNode.time_minutes) : null;
+            const description = csvNode.description || '';
+            const textbookPages = csvNode.textbook_pages || '';
+
+            const sessionNodeData = {
+                node_id: nodeId,
+                title: title,
+                raw_content: JSON.stringify({
+                    type: nodeType,
+                    difficulty: difficulty,
+                    time_minutes: timeMinutes,
+                    description: description,
+                    textbook_pages: textbookPages,
+                    original_csv_data: csvNode
+                }),
+                chapter_id: 1
+            };
+
+            try {
+                const response = await fetch(`${this.apiBaseUrl}/session/${this.sessionId}/nodes`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(sessionNodeData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+
+                    // Handle duplicate node conflicts gracefully
+                    if (response.status === 400 && errorData.detail && errorData.detail.includes('already exists')) {
+                        console.warn(`⚠️ Node ${nodeId} already exists in session, skipping`);
+                        return { success: true, skipped: true, message: `Node ${nodeId} already exists` };
+                    }
+
+                    console.error(`Failed to create session node ${nodeId}:`, errorData);
+                    throw new Error(`Failed to create session node ${nodeId}: ${errorData.detail || 'Unknown error'}`);
+                }
+
+                const result = await response.json();
+                console.log(`✅ Created session node ${nodeId}:`, result);
+                return result;
+            } catch (error) {
+                console.error(`Error creating session node ${nodeId}:`, error);
+
+                // Allow CSV import to continue even if some nodes fail
+                console.warn(`⚠️ Continuing CSV import despite error with node ${nodeId}`);
+                return { success: false, error: error.message, nodeId: nodeId };
+            }
+        });
+
+        try {
+            const results = await Promise.all(creationPromises);
+            const successful = results.filter(r => r.success && !r.skipped).length;
+            const skipped = results.filter(r => r.success && r.skipped).length;
+            const failed = results.filter(r => !r.success).length;
+
+            console.log(`📊 CSV Session Node Creation Summary:`);
+            console.log(`   ✅ Successfully created: ${successful}`);
+            if (skipped > 0) console.log(`   ⚠️ Skipped (already exist): ${skipped}`);
+            if (failed > 0) console.log(`   ❌ Failed: ${failed}`);
+
+            // Only throw if all nodes failed
+            if (failed === results.length) {
+                throw new Error('All CSV nodes failed to create in session');
+            }
+        } catch (error) {
+            console.error('Failed to create CSV nodes in session:', error);
+            throw error;
+        }
+    }
+
+    // Create session relationships from processed CSV data
+    async createSessionRelationshipsFromCsv() {
+        if (!this.sessionId) {
+            console.error('No session ID available for creating CSV relationships');
+            throw new Error('Session must be initialized before importing CSV relationships');
+        }
+
+        if (!this.relationships || this.relationships.length === 0) {
+            console.log('No relationships to persist');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/session/${this.sessionId}/relationships/bulk`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    relationships: this.relationships
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Failed to create session relationships:', errorData);
+                throw new Error(`Failed to create session relationships: ${errorData.detail || 'Unknown error'}`);
+            }
+
+            const result = await response.json();
+            console.log(`✅ Created ${result.count} session relationships:`, result);
+            return result;
+        } catch (error) {
+            console.error('Error creating session relationships:', error);
+            throw error;
+        }
     }
 
     // Process relationships from CSV data
