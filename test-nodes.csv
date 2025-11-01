@@ -1,0 +1,4 @@
+node_id,name,description,type,difficulty
+N001,Introduction to Fractions,Basic fraction concepts,core,1
+N002,Fraction Addition,Adding fractions with same denominators,core,2
+S001,Counting Practice,Review counting 1-10,support,1

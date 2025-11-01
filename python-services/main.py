@@ -1276,9 +1276,7 @@ async def analyze_pdf_vision_streaming(node_id: str, file: UploadFile = File(...
     if context and len(context) > 1000:
         raise HTTPException(status_code=400, detail="Context text too long. Maximum 1000 characters")
 
-    # Validate node exists (basic check)
-    if not any(n.node_id == node_id for n in nodes_storage) and node_id not in ["N001", "N002", "N003"]:
-        raise HTTPException(status_code=404, detail=f"Node {node_id} not found")
+    # Note: Node validation removed - database operations will handle missing nodes gracefully
 
     async def generate_progress_stream():
         try:
@@ -1448,9 +1446,7 @@ async def analyze_pdf_vision_for_components(node_id: str, file: UploadFile = Fil
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
 
-    # Validate node exists (basic check)
-    if not any(n.node_id == node_id for n in nodes_storage) and node_id not in ["N001", "N002", "N003"]:
-        raise HTTPException(status_code=404, detail=f"Node {node_id} not found")
+    # Note: Node validation removed - database operations will handle missing nodes gracefully
 
     try:
         # Save uploaded PDF temporarily
@@ -1544,9 +1540,7 @@ async def analyze_pdf_vision_for_components(node_id: str, file: UploadFile = Fil
 async def get_node_components(node_id: str):
     """Retrieve component sequence for a specific node (using database)"""
     try:
-        # Check if node exists (simplified check for now)
-        if not any(n.node_id == node_id for n in nodes_storage) and node_id not in ["N001", "N002", "N003"]:
-            raise HTTPException(status_code=404, detail=f"Node {node_id} not found")
+        # Note: Node validation removed - database operations will handle missing nodes gracefully
 
         # Get component sequence from database
         db_components = await db_manager.get_node_components(node_id)
@@ -1592,9 +1586,7 @@ async def get_node_components(node_id: str):
 async def save_node_components(node_id: str, sequence: ComponentSequence):
     """Save complete component sequence for a node"""
     try:
-        # Validate node exists
-        if not any(n.node_id == node_id for n in nodes_storage) and node_id not in ["N001", "N002", "N003"]:
-            raise HTTPException(status_code=404, detail=f"Node {node_id} not found")
+        # Note: Node validation removed - database operations will handle missing nodes gracefully
 
         # Validate component types
         from component_schemas import COMPONENT_SCHEMAS
