@@ -1628,12 +1628,6 @@ body {
     background: rgba(0, 122, 255, 0.05);
 }
 
-.node-item.active {
-    background: rgba(0, 122, 255, 0.08);
-    border-color: var(--primary-blue);
-    border-left: 3px solid var(--primary-blue);
-    padding-left: calc(0.75rem - 3px);
-}
 
 .node-indicator {
     width: 6px;
@@ -3668,7 +3662,7 @@ body {
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.node-item.downloads-node-item.selected {
+.node-item.downloads-node-item.active {
     border-color: #2196F3;
     box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
 }

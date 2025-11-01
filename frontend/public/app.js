@@ -4681,7 +4681,7 @@ class TemplateEditorCMS {
         item.setAttribute('data-node-id', nodeId);
 
         if (this.selectedNode === nodeId) {
-            item.classList.add('selected');
+            item.classList.add('active');
         }
 
         // Downloads-style node structure
