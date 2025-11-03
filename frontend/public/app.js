@@ -35,6 +35,9 @@ class TemplateEditorCMS {
         this.viewModeToggleBtn = null;
         this.visualNetworkContainer = null;
 
+        // Content/Question mode state
+        this.currentMode = 'content'; // 'content' or 'question'
+
         // Visual network zoom/pan state
         this.visualScale = 1;
         this.visualPanX = 0;
@@ -71,6 +74,7 @@ class TemplateEditorCMS {
         this.bindEvents();
         this.initializeTextFormatting();
         this.updatePreview();
+        this.initializeDefaultMode();
 
         // Initialize session asynchronously and store promise
         this.sessionReadyPromise = this.initializeSession().then(async () => {
@@ -137,6 +141,15 @@ class TemplateEditorCMS {
         this.zoomInBtn = document.getElementById('zoom-in-btn');
         this.zoomOutBtn = document.getElementById('zoom-out-btn');
         this.resetViewBtn = document.getElementById('reset-view-btn');
+
+        // Mode toggle elements
+        this.modeToggleButtons = document.querySelectorAll('.mode-toggle-btn');
+        this.contentModeBtn = document.getElementById('content-mode-btn');
+        this.questionModeBtn = document.getElementById('question-mode-btn');
+        this.questionInterface = document.getElementById('question-mode-interface');
+        this.editorLayout = document.querySelector('.editor-layout');
+        this.templateEditorPanel = document.getElementById('template-editor-panel');
+        this.livePreviewPanel = document.getElementById('live-preview-panel');
         this.positionModeBtn = document.getElementById('position-mode-btn');
         this.savePositionsBtn = document.getElementById('save-positions-btn');
 
@@ -218,6 +231,11 @@ class TemplateEditorCMS {
         if (this.savePositionsBtn) {
             this.savePositionsBtn.addEventListener('click', async () => await this.saveNodePositions());
         }
+
+        // Mode toggle events
+        this.modeToggleButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => this.handleModeToggle(e));
+        });
 
         // Visual network pan events
         if (this.visualNetworkSvg) {
@@ -944,6 +962,63 @@ class TemplateEditorCMS {
         // Update preview and positions
         this.updatePreview();
         this.updateComponentPositions();
+    }
+
+    // Mode Toggle Methods
+    handleModeToggle(event) {
+        const clickedButton = event.target.closest('.mode-toggle-btn');
+        const targetMode = clickedButton.dataset.mode;
+
+        if (targetMode !== this.currentMode) {
+            this.currentMode = targetMode;
+
+            if (targetMode === 'content') {
+                this.switchToContentMode();
+            } else if (targetMode === 'question') {
+                this.switchToQuestionMode();
+            }
+
+            this.updateModeButtons();
+        }
+    }
+
+    switchToContentMode() {
+        // Add content-mode class to body/main container
+        document.body.classList.remove('question-mode');
+        document.body.classList.add('content-mode');
+
+        // Hide question interface
+        if (this.questionInterface) {
+            this.questionInterface.style.display = 'none';
+        }
+    }
+
+    switchToQuestionMode() {
+        // Add question-mode class to body/main container
+        document.body.classList.remove('content-mode');
+        document.body.classList.add('question-mode');
+
+        // Show question interface
+        if (this.questionInterface) {
+            this.questionInterface.style.display = 'flex';
+        }
+    }
+
+    updateModeButtons() {
+        this.modeToggleButtons.forEach(btn => {
+            const buttonMode = btn.dataset.mode;
+            if (buttonMode === this.currentMode) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
+
+    initializeDefaultMode() {
+        // Initialize to content mode by default
+        this.switchToContentMode();
+        this.updateModeButtons();
     }
 
     // AI Upload Handlers

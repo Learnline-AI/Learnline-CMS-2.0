@@ -9,13 +9,11 @@ interface AgentContext {
   prompt: string;
   activatedSkills: string[];
   recommendedTemplates: string[];
-  recommendedCommands: string[];
   hookValidationData: any[];
   educationalContext?: any;
   crossBoundaryOperation?: boolean;
   errorPatterns: string[];
   systemState: string;
-  validationNeeded: boolean;
 }
 
 interface AgentActivation {
@@ -107,7 +105,7 @@ const AGENT_ACTIVATION_RULES = {
     triggers: [
       'architecture', 'compliance', 'validation', 'performance',
       'optimization', 'bottleneck', 'system health', 'integration',
-      'cross-boundary', 'pattern consistency'
+      'cross-boundary', 'pattern consistency', 'no breaking', 'do not break anything'
     ],
     priority: 70,
     activation_conditions: {
@@ -143,73 +141,34 @@ const ERROR_PATTERNS = {
   ]
 };
 
-// Command integration patterns with agents
-const COMMAND_AGENT_WORKFLOWS = {
-  'component-development-workflow': {
-    agents: ['component-integration-specialist', 'educational-content-specialist'],
-    commands: ['/architecture-validate --component "Component Integration"'],
-    timing: 'post-development',
-    description: 'Validate component integration after development'
-  },
-
-  'csv-import-workflow': {
-    agents: ['csv-graph-specialist', 'session-recovery-specialist'],
-    commands: ['/graph-health --format summary', '/architecture-validate'],
-    timing: 'pre-and-post',
-    description: 'Validate before import, verify integrity after import'
-  },
-
-  'educational-content-workflow': {
-    agents: ['educational-content-specialist'],
-    commands: ['/curriculum-align', '/architecture-validate --component "Vision AI"'],
-    timing: 'post-development',
-    description: 'Ensure NCERT compliance and content quality'
-  },
-
-  'system-health-workflow': {
-    agents: ['architecture-compliance-specialist'],
-    commands: ['/architecture-validate', '/graph-health', '/curriculum-align'],
-    timing: 'maintenance',
-    description: 'Comprehensive system health check'
-  }
-};
-
-// Multi-agent coordination patterns enhanced with command integration
+// Multi-agent coordination patterns
 const COORDINATION_PATTERNS = {
   'educational-feature-development': {
     primary: 'educational-content-specialist',
     supporting: ['component-integration-specialist', 'session-recovery-specialist'],
     triggers: ['educational context + component work + session operations'],
-    coordination: 'Educational specialist leads, others provide technical support',
-    workflow: 'educational-content-workflow',
-    validation_commands: ['/curriculum-align', '/architecture-validate --component "Component Integration"']
+    coordination: 'Educational specialist leads, others provide technical support'
   },
 
   'component-integration-with-ai': {
     primary: 'component-integration-specialist',
     supporting: ['vision-ai-specialist', 'educational-content-specialist'],
     triggers: ['component work + AI extraction + educational validation'],
-    coordination: 'Component specialist leads integration, AI specialist optimizes extraction',
-    workflow: 'component-development-workflow',
-    validation_commands: ['/architecture-validate --component "Component Integration"', '/architecture-validate --component "Vision AI"']
+    coordination: 'Component specialist leads integration, AI specialist optimizes extraction'
   },
 
   'csv-knowledge-graph-import': {
     primary: 'csv-graph-specialist',
     supporting: ['session-recovery-specialist', 'educational-content-specialist'],
     triggers: ['CSV import + transaction safety + educational graph'],
-    coordination: 'CSV specialist leads import, session specialist ensures atomicity',
-    workflow: 'csv-import-workflow',
-    validation_commands: ['/graph-health', '/architecture-validate']
+    coordination: 'CSV specialist leads import, session specialist ensures atomicity'
   },
 
   'system-wide-optimization': {
     primary: 'architecture-compliance-specialist',
     supporting: ['all-specialists'],
     triggers: ['performance issues + cross-boundary operations'],
-    coordination: 'Architecture specialist coordinates system-wide improvements',
-    workflow: 'system-health-workflow',
-    validation_commands: ['/architecture-validate', '/graph-health', '/curriculum-align']
+    coordination: 'Architecture specialist coordinates system-wide improvements'
   }
 };
 
@@ -272,31 +231,7 @@ export const agentCoordinator: UserPromptSubmitHook = {
     if (agentContext.activatedSkills.length > 0) {
       message += `🎯 Activated skills: ${agentContext.activatedSkills.join(', ')}\n`;
     }
-    if (agentContext.validationNeeded) {
-      message += '🔍 Validation/testing required\n';
-    }
     message += '\n';
-
-    // Add command recommendations
-    if (agentContext.recommendedCommands.length > 0 || coordinationPattern?.validation_commands) {
-      message += '**Command Integration**:\n';
-
-      if (coordinationPattern?.validation_commands) {
-        message += `📋 **Workflow Commands** (${coordinationPattern.pattern}):\n`;
-        coordinationPattern.validation_commands.forEach(cmd => {
-          message += `- \`${cmd}\`\n`;
-        });
-      }
-
-      if (agentContext.recommendedCommands.length > 0) {
-        message += `⚡ **Context Commands**:\n`;
-        agentContext.recommendedCommands.forEach(cmd => {
-          message += `- \`${cmd}\`\n`;
-        });
-      }
-
-      message += '\n';
-    }
 
     // Provide coordination guidance
     message += await provideCoordinationGuidance(coordinationPattern, sortedActivations);
@@ -320,11 +255,9 @@ async function buildAgentContext(prompt: string): Promise<AgentContext> {
     prompt,
     activatedSkills: [], // Would be populated from skill activation hook
     recommendedTemplates: [], // Would be populated from template recommendation
-    recommendedCommands: [], // Would be populated from skill activation hook
     hookValidationData: [], // Would be populated from validation hooks
     errorPatterns: [],
-    systemState: 'normal',
-    validationNeeded: false
+    systemState: 'normal'
   };
 
   // Detect error patterns
@@ -353,36 +286,6 @@ async function buildAgentContext(prompt: string): Promise<AgentContext> {
     prompt.toLowerCase().includes(boundary.toLowerCase())
   );
   context.crossBoundaryOperation = mentionedBoundaries.length > 1;
-
-  // Detect validation needs
-  const validationTriggers = [
-    'validate', 'check', 'verify', 'test', 'debug', 'issue', 'problem',
-    'health', 'integrity', 'compliance', 'quality'
-  ];
-  context.validationNeeded = validationTriggers.some(trigger =>
-    prompt.toLowerCase().includes(trigger.toLowerCase())
-  );
-
-  // Generate command recommendations based on context
-  if (context.validationNeeded || context.errorPatterns.length > 0) {
-    // Educational validation
-    if (context.educationalContext) {
-      context.recommendedCommands.push('/curriculum-align');
-    }
-
-    // Graph validation for CSV/graph operations
-    if (boundaryTriggers.some(boundary =>
-        ['CSV', 'graph', 'relationship', 'node'].includes(boundary) &&
-        prompt.toLowerCase().includes(boundary.toLowerCase())
-      )) {
-      context.recommendedCommands.push('/graph-health');
-    }
-
-    // System-wide validation for multi-boundary operations
-    if (context.crossBoundaryOperation || context.errorPatterns.length > 1) {
-      context.recommendedCommands.push('/architecture-validate');
-    }
-  }
 
   return context;
 }
@@ -500,7 +403,7 @@ function determineCoordinationPattern(activations: AgentActivation[], context: A
 }
 
 async function provideCoordinationGuidance(coordinationPattern: any, activations: AgentActivation[]): Promise<string> {
-  let guidance = '🎭 **Agent + Command Coordination Guidance**:\n\n';
+  let guidance = '🎭 **Agent Coordination Guidance**:\n\n';
 
   if (!coordinationPattern) {
     return '';
@@ -511,8 +414,7 @@ async function provideCoordinationGuidance(coordinationPattern: any, activations
     guidance += '1. Educational specialist provides domain expertise and requirements\n';
     guidance += '2. Component specialist handles technical integration\n';
     guidance += '3. Session specialist ensures data persistence and atomicity\n';
-    guidance += '4. **Post-development**: Run `/curriculum-align` to validate NCERT compliance\n';
-    guidance += '5. **Final validation**: Run `/architecture-validate --component "Component Integration"`\n\n';
+    guidance += '4. All agents coordinate on NCERT alignment and educational quality\n\n';
   }
 
   if (coordinationPattern.pattern === 'component-integration-with-ai') {
@@ -520,54 +422,15 @@ async function provideCoordinationGuidance(coordinationPattern: any, activations
     guidance += '1. Component specialist leads 9-step integration process\n';
     guidance += '2. Vision AI specialist optimizes PDF extraction accuracy\n';
     guidance += '3. Educational specialist validates educational appropriateness\n';
-    guidance += '4. Focus on Step 6 (populateComponentInputs) to prevent empty components\n';
-    guidance += '5. **Validation**: Run component validation commands after each step\n\n';
-  }
-
-  if (coordinationPattern.pattern === 'csv-knowledge-graph-import') {
-    guidance += '**CSV Knowledge Graph Import Pattern**:\n';
-    guidance += '1. **Pre-import**: Run `/graph-health --format summary` to check current state\n';
-    guidance += '2. CSV specialist leads import with transaction safety\n';
-    guidance += '3. Session specialist ensures atomicity and rollback capability\n';
-    guidance += '4. **Post-import**: Run `/graph-health` to verify integrity\n';
-    guidance += '5. **System check**: Run `/architecture-validate` for overall health\n\n';
-  }
-
-  if (coordinationPattern.pattern === 'system-wide-optimization') {
-    guidance += '**System-Wide Optimization Pattern**:\n';
-    guidance += '1. **Initial assessment**: Run all validation commands for baseline\n';
-    guidance += '2. Architecture specialist coordinates improvements across specialists\n';
-    guidance += '3. Each specialist optimizes their domain\n';
-    guidance += '4. **Progress validation**: Re-run commands after each optimization\n';
-    guidance += '5. **Final verification**: Complete validation suite\n\n';
-  }
-
-  // Add workflow-specific command timing guidance
-  const workflow = COMMAND_AGENT_WORKFLOWS[coordinationPattern.workflow];
-  if (workflow) {
-    guidance += `**Command Execution Timing** (${workflow.timing}):\n`;
-
-    if (workflow.timing === 'pre-and-post') {
-      guidance += '- Run validation commands **before** starting work to establish baseline\n';
-      guidance += '- Run validation commands **after** completion to verify success\n';
-    } else if (workflow.timing === 'post-development') {
-      guidance += '- Run validation commands **after** completing development work\n';
-      guidance += '- Use results to guide any necessary refinements\n';
-    } else if (workflow.timing === 'maintenance') {
-      guidance += '- Run validation commands on a **regular schedule**\n';
-      guidance += '- Use for proactive system health monitoring\n';
-    }
-    guidance += '\n';
+    guidance += '4. Focus on Step 6 (populateComponentInputs) to prevent empty components\n\n';
   }
 
   guidance += '**Coordination Best Practices**:\n';
   guidance += '- Primary agent provides initial assessment and guidance\n';
   guidance += '- Supporting agents contribute specialized expertise\n';
-  guidance += '- **Validation commands verify agent work quality**\n';
   guidance += '- Educational context always prioritized when present\n';
-  guidance += '- Error patterns trigger immediate specialist + validation response\n';
-  guidance += '- System stability (session specialist) never compromised\n';
-  guidance += '- **Commands provide objective validation of agent recommendations**\n\n';
+  guidance += '- Error patterns trigger immediate specialist response\n';
+  guidance += '- System stability (session specialist) never compromised\n\n';
 
   return guidance;
 }
