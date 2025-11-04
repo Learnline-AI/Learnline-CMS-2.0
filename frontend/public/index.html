@@ -272,6 +272,56 @@
                                     <!-- Network nodes and connections will be added dynamically -->
                                 </g>
                             </svg>
+
+                            <!-- Relationship Metadata Panel (slides in from right) -->
+                            <div id="relationship-metadata-panel" class="relationship-metadata-panel">
+                                <div class="panel-header">
+                                    <h3>Create Relationship</h3>
+                                    <button class="panel-close-btn" id="panel-close-btn" title="Close">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div class="panel-content">
+                                    <div class="relationship-info">
+                                        <label>Connection:</label>
+                                        <div id="relationship-nodes-display" class="nodes-display">
+                                            <span id="from-node-display">N001</span>
+                                            <i class="fas fa-arrow-right"></i>
+                                            <span id="to-node-display">N002</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="relationship-type-select">Relationship Type:</label>
+                                        <select id="relationship-type-select" class="relationship-type-dropdown">
+                                            <option value="LEADS_TO" data-color="#007AFF">📘 LEADS_TO - Next natural step</option>
+                                            <option value="prerequisite" data-color="#FF6B6B">📕 PREREQUISITE - Required before</option>
+                                            <option value="PREREQUISITE_FOR" data-color="#FF6B6B">📕 PREREQUISITE_FOR - This enables</option>
+                                            <option value="enrichment" data-color="#51CF66">📗 ENRICHMENT - Optional/advanced</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="relationship-explanation">Explanation (optional):</label>
+                                        <textarea
+                                            id="relationship-explanation"
+                                            class="relationship-explanation"
+                                            placeholder="Why does this relationship exist? (e.g., 'Students must understand fractions before learning fraction addition')"
+                                            rows="4"
+                                        ></textarea>
+                                    </div>
+
+                                    <div id="panel-error-message" class="panel-error-message" style="display: none;"></div>
+
+                                    <div class="panel-actions">
+                                        <button id="panel-cancel-btn" class="panel-btn cancel-btn">Cancel</button>
+                                        <button id="panel-save-btn" class="panel-btn save-btn">Save Relationship</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Panel overlay (dims background) -->
+                            <div id="panel-overlay" class="panel-overlay"></div>
                         </div>
                     </div>
 

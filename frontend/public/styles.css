@@ -4127,3 +4127,254 @@ body {
     cursor: default;
 }
 
+/* ============================================
+   Relationship Metadata Panel
+   ============================================ */
+
+/* Panel container - hidden by default, slides in from right */
+.relationship-metadata-panel {
+    position: fixed;
+    top: 0;
+    right: -380px; /* Hidden off-screen */
+    width: 350px;
+    height: 100vh;
+    background: white;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.2);
+    z-index: 10001;
+    transition: right 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Panel visible state - slides in */
+.relationship-metadata-panel.panel-visible {
+    right: 0;
+}
+
+/* Panel overlay - dims background */
+.panel-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.panel-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Panel header */
+.relationship-metadata-panel .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    background: #f8f9fa;
+}
+
+.relationship-metadata-panel .panel-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.panel-close-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #666;
+    cursor: pointer;
+    padding: 5px;
+    transition: color 0.2s;
+}
+
+.panel-close-btn:hover {
+    color: #000;
+}
+
+/* Panel content area */
+.panel-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Relationship info display */
+.relationship-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.relationship-info label {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.nodes-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: #f0f4f8;
+    border-radius: 6px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.nodes-display i {
+    color: #007AFF;
+}
+
+/* Form groups */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1a1a1a;
+}
+
+/* Relationship type dropdown */
+.relationship-type-dropdown {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.relationship-type-dropdown:hover {
+    border-color: #007AFF;
+}
+
+.relationship-type-dropdown:focus {
+    outline: none;
+    border-color: #007AFF;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+/* Explanation textarea */
+.relationship-explanation {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+    transition: border-color 0.2s;
+}
+
+.relationship-explanation:hover {
+    border-color: #007AFF;
+}
+
+.relationship-explanation:focus {
+    outline: none;
+    border-color: #007AFF;
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+.relationship-explanation::placeholder {
+    color: #999;
+}
+
+/* Error message */
+.panel-error-message {
+    padding: 12px;
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 6px;
+    color: #c00;
+    font-size: 13px;
+}
+
+/* Panel action buttons */
+.panel-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.panel-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.panel-btn.cancel-btn {
+    background: #f0f0f0;
+    color: #1a1a1a;
+}
+
+.panel-btn.cancel-btn:hover {
+    background: #e0e0e0;
+}
+
+.panel-btn.save-btn {
+    background: #51CF66;
+    color: white;
+}
+
+.panel-btn.save-btn:hover {
+    background: #40C057;
+}
+
+.panel-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.panel-btn.loading {
+    position: relative;
+    color: transparent;
+}
+
+.panel-btn.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+

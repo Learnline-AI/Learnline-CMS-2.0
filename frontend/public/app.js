@@ -678,14 +678,239 @@ class TemplateEditorCMS {
     }
 
     acceptPreview() {
-        console.log('=== RELATIONSHIP ACCEPTED ===');
-        console.log(`From: ${this.previewFromNodeId}`);
-        console.log(`To: ${this.previewToNodeId}`);
-        console.log('Phase 3: Logging only. Phase 4 will add API call to save relationship.');
-        console.log('=============================');
+        console.log('Accept button clicked - showing metadata panel');
 
-        // Clean up preview UI
-        this.clearPreviewState();
+        // CRITICAL FIX: Remove click-outside listener FIRST before hiding buttons
+        if (this.clickOutsideHandler) {
+            document.removeEventListener('click', this.clickOutsideHandler);
+            this.clickOutsideHandler = null;
+            console.log('Removed click-outside handler in acceptPreview');
+        }
+
+        // Hide flip/accept buttons (keep preview arrow visible)
+        if (this.previewButtons) {
+            this.previewButtons.style.display = 'none';
+        }
+
+        // Show metadata collection panel
+        this.showMetadataPanel();
+    }
+
+    showMetadataPanel() {
+        console.log('Opening relationship metadata panel');
+
+        // Get panel and overlay elements
+        const panel = document.getElementById('relationship-metadata-panel');
+        const overlay = document.getElementById('panel-overlay');
+        const fromDisplay = document.getElementById('from-node-display');
+        const toDisplay = document.getElementById('to-node-display');
+        const typeSelect = document.getElementById('relationship-type-select');
+        const explanationTextarea = document.getElementById('relationship-explanation');
+        const errorMessage = document.getElementById('panel-error-message');
+
+        if (!panel || !overlay) {
+            console.error('Panel elements not found');
+            return;
+        }
+
+        // Populate from/to node display
+        fromDisplay.textContent = this.previewFromNodeId;
+        toDisplay.textContent = this.previewToNodeId;
+
+        // Reset form
+        typeSelect.value = 'LEADS_TO'; // Default to LEADS_TO
+        explanationTextarea.value = '';
+        errorMessage.style.display = 'none';
+
+        // Show panel with slide-in animation
+        overlay.classList.add('visible');
+        panel.classList.add('panel-visible');
+
+        // Set up event listeners
+        const closeBtn = document.getElementById('panel-close-btn');
+        const cancelBtn = document.getElementById('panel-cancel-btn');
+        const saveBtn = document.getElementById('panel-save-btn');
+
+        // Close button handler
+        closeBtn.onclick = () => this.hideMetadataPanel();
+
+        // Cancel button handler
+        cancelBtn.onclick = () => this.hideMetadataPanel();
+
+        // Save button handler
+        saveBtn.onclick = () => {
+            const selectedType = typeSelect.value;
+            const explanation = explanationTextarea.value.trim();
+            this.saveRelationship(selectedType, explanation);
+        };
+
+        // Type dropdown change handler - update preview arrow color
+        typeSelect.onchange = (e) => {
+            this.updatePreviewArrowColor(e.target.value);
+        };
+
+        // FIX: Escape key handler scoped to panel, not document (prevents space key blocking)
+        this.panelEscapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                this.hideMetadataPanel();
+            }
+        };
+        panel.addEventListener('keydown', this.panelEscapeHandler);
+
+        // Focus on dropdown for keyboard accessibility
+        setTimeout(() => typeSelect.focus(), 300);
+
+        console.log('Metadata panel opened');
+    }
+
+    hideMetadataPanel() {
+        console.log('Closing relationship metadata panel');
+
+        const panel = document.getElementById('relationship-metadata-panel');
+        const overlay = document.getElementById('panel-overlay');
+
+        if (!panel || !overlay) return;
+
+        // Trigger slide-out animation
+        panel.classList.remove('panel-visible');
+        overlay.classList.remove('visible');
+
+        // Wait for animation to complete, then cleanup
+        setTimeout(() => {
+            // Clear form values
+            const typeSelect = document.getElementById('relationship-type-select');
+            const explanationTextarea = document.getElementById('relationship-explanation');
+            const errorMessage = document.getElementById('panel-error-message');
+
+            if (typeSelect) typeSelect.value = 'LEADS_TO';
+            if (explanationTextarea) explanationTextarea.value = '';
+            if (errorMessage) errorMessage.style.display = 'none';
+
+            // Remove event listeners to prevent memory leaks
+            if (this.panelEscapeHandler && panel) {
+                panel.removeEventListener('keydown', this.panelEscapeHandler);
+                this.panelEscapeHandler = null;
+            }
+
+            // Clear preview state (removes arrow, buttons, resets selection)
+            this.clearPreviewState();
+
+            console.log('Metadata panel closed');
+        }, 300); // Match CSS transition duration
+    }
+
+    async saveRelationship(type, explanation) {
+        console.log('Saving relationship:', { type, explanation });
+
+        // Get UI elements
+        const saveBtn = document.getElementById('panel-save-btn');
+        const errorMessage = document.getElementById('panel-error-message');
+
+        // Validate type (explanation is optional)
+        if (!type) {
+            errorMessage.textContent = 'Please select a relationship type';
+            errorMessage.style.display = 'block';
+            return;
+        }
+
+        // Show loading state
+        saveBtn.disabled = true;
+        saveBtn.classList.add('loading');
+        errorMessage.style.display = 'none';
+
+        try {
+            // Ensure session is ready
+            await this.ensureSessionReady();
+
+            // Build request body with API field name format
+            const requestBody = {
+                from_node_id: this.previewFromNodeId,    // Transform: from → from_node_id
+                to_node_id: this.previewToNodeId,        // Transform: to → to_node_id
+                relationship_type: type,                  // Transform: type → relationship_type
+                explanation: explanation || '',
+                created_by: 'USER',
+                confidence_score: 1.0
+            };
+
+            console.log('Calling API with:', requestBody);
+
+            // Call API to persist relationship
+            const response = await fetch(
+                `${this.apiBaseUrl}/session/${this.sessionId}/relationships`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status} ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            console.log('Relationship saved successfully:', result);
+
+            // Add to local relationships array (frontend format!)
+            this.relationships.push({
+                from: this.previewFromNodeId,    // Frontend uses 'from'
+                to: this.previewToNodeId,        // Frontend uses 'to'
+                type: type,                      // Frontend uses 'type'
+                explanation: explanation || ''
+            });
+
+            console.log(`Relationship added to local array. Total: ${this.relationships.length}`);
+
+            // Hide panel (triggers slide-out animation and cleanup)
+            this.hideMetadataPanel();
+
+            // Wait for panel animation, then redraw permanent arrow
+            setTimeout(async () => {
+                // Redraw all connections to show new permanent arrow
+                await this.setupRelationshipConnections();
+                console.log('Permanent arrow rendered');
+            }, 350); // Slightly longer than panel animation
+
+        } catch (error) {
+            console.error('Failed to save relationship:', error);
+
+            // Show error in panel (keep panel open for retry)
+            errorMessage.textContent = `Error: ${error.message}`;
+            errorMessage.style.display = 'block';
+
+            // Re-enable save button
+            saveBtn.disabled = false;
+            saveBtn.classList.remove('loading');
+        }
+    }
+
+    updatePreviewArrowColor(relationshipType) {
+        console.log('Updating preview arrow color to:', relationshipType);
+
+        // Get current preview arrow
+        if (!this.previewArrow) {
+            console.warn('No preview arrow to update');
+            return;
+        }
+
+        // Relationship type styles (must match setupRelationshipConnections)
+        const relationshipStyles = {
+            'LEADS_TO': { stroke: '#007AFF', strokeWidth: 2, marker: 'arrow-leads-to' },
+            'prerequisite': { stroke: '#FF6B6B', strokeWidth: 1.5, marker: 'arrow-prerequisite' },
+            'PREREQUISITE_FOR': { stroke: '#FF6B6B', strokeWidth: 1.5, marker: 'arrow-prerequisite' },
+            'enrichment': { stroke: '#51CF66', strokeWidth: 1, marker: 'arrow-enrichment' }
+        };
+
+        // Get style for selected type (default to LEADS_TO)
+        const style = relationshipStyles[relationshipType] || relationshipStyles['LEADS_TO'];
+
+        // Update arrow styling
+        this.previewArrow.setAttribute('stroke', style.stroke);
+        this.previewArrow.setAttribute('stroke-width', style.strokeWidth);
+        this.previewArrow.setAttribute('marker-end', `url(#${style.marker})`);
+        // Keep dotted effect (don't remove stroke-dasharray)
+
+        console.log(`Preview arrow updated to ${relationshipType} style`);
     }
 
     clearPreviewState() {
