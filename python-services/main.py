@@ -371,6 +371,30 @@ async def create_session_node(session_id: str, node_data: dict):
         logger.error(f"Error creating session node: {str(e)}")
         raise HTTPException(status_code=500, detail="Error creating session node")
 
+@app.delete("/session/{session_id}/nodes/{node_id}")
+async def delete_session_node(session_id: str, node_id: str):
+    """Delete a node and all its relationships from a session"""
+    try:
+        if not db_manager:
+            raise HTTPException(status_code=500, detail="Database not available")
+
+        # Validate session first
+        is_valid = await db_manager.validate_session(session_id)
+        if not is_valid:
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+        # Delete the node and its relationships (atomic operation)
+        success = await db_manager.delete_session_node(session_id, node_id)
+        if success:
+            return {"success": True, "message": f"Node {node_id} deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail=f"Node {node_id} not found in session")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting session node: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error deleting session node")
+
 @app.get("/session/{session_id}/relationships")
 async def get_session_relationships(session_id: str):
     """Get all relationships for a specific session"""

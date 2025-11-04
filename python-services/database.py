@@ -746,6 +746,57 @@ class DatabaseManager:
             logger.error(f"Error creating session node: {str(e)}")
             return False
 
+    async def delete_session_node(self, session_id: str, node_id: str) -> bool:
+        """Delete a node and all its relationships from a session (atomic operation)"""
+        try:
+            # First check if node exists
+            check_query = """
+            SELECT id FROM nodes
+            WHERE session_id = :session_id AND node_id = :node_id
+            """
+            node_result = await self.execute_query(check_query, {"session_id": session_id, "node_id": node_id})
+
+            if not node_result:
+                logger.warning(f"Node {node_id} not found in session {session_id}")
+                return False
+
+            # Count relationships before deletion (for logging)
+            count_query = """
+            SELECT COUNT(*) as count FROM session_relationships
+            WHERE session_id = :session_id AND (from_node_id = :node_id OR to_node_id = :node_id)
+            """
+            count_result = await self.execute_query(count_query, {"session_id": session_id, "node_id": node_id})
+            relationship_count = count_result[0]["count"] if count_result else 0
+
+            # Use transaction to ensure atomicity - either both operations succeed or both rollback
+            async with self.transaction_context() as session:
+                # Step 1: Delete all relationships where this node is source or target
+                delete_relationships_query = """
+                DELETE FROM session_relationships
+                WHERE session_id = :session_id AND (from_node_id = :node_id OR to_node_id = :node_id)
+                """
+                await session.execute(
+                    text(delete_relationships_query),
+                    {"session_id": session_id, "node_id": node_id}
+                )
+
+                # Step 2: Delete the node (components will auto-cascade via FK constraint)
+                delete_node_query = """
+                DELETE FROM nodes
+                WHERE session_id = :session_id AND node_id = :node_id
+                """
+                await session.execute(
+                    text(delete_node_query),
+                    {"session_id": session_id, "node_id": node_id}
+                )
+
+            logger.info(f"Deleted node {node_id} and {relationship_count} relationship(s) from session {session_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error deleting session node: {str(e)}")
+            return False
+
     async def create_session_relationship(self, session_id: str, relationship_data: Dict[str, Any]) -> bool:
         """Create a new relationship in a session"""
         try:

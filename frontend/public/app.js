@@ -62,6 +62,7 @@ class TemplateEditorCMS {
 
         // Relationship data - Initialize as empty array to prevent race conditions
         this.relationships = []; // Will be populated from database during session loading
+        this.selectedNodesForRelationship = new Set(); // Multi-select for relationship creation
 
         // Session and Auto-Save state
         this.sessionId = null;
@@ -152,6 +153,8 @@ class TemplateEditorCMS {
         this.livePreviewPanel = document.getElementById('live-preview-panel');
         this.positionModeBtn = document.getElementById('position-mode-btn');
         this.savePositionsBtn = document.getElementById('save-positions-btn');
+        this.deleteNodeBtn = document.getElementById('delete-node-btn');
+        this.createRelationshipBtn = document.getElementById('create-relationship-btn');
 
         // Selection tracking
         this.selectedComponent = null;
@@ -230,6 +233,12 @@ class TemplateEditorCMS {
         }
         if (this.savePositionsBtn) {
             this.savePositionsBtn.addEventListener('click', async () => await this.saveNodePositions());
+        }
+        if (this.deleteNodeBtn) {
+            this.deleteNodeBtn.addEventListener('click', async () => await this.deleteNode());
+        }
+        if (this.createRelationshipBtn) {
+            this.createRelationshipBtn.addEventListener('click', () => this.showRelationshipDialog());
         }
 
         // Mode toggle events
@@ -321,6 +330,95 @@ class TemplateEditorCMS {
         }
     }
 
+    async deleteNode() {
+        await this.ensureSessionReady();
+
+        // Guard: Check if a node is selected
+        if (!this.selectedNode) {
+            alert('Please select a node to delete.');
+            return;
+        }
+
+        const nodeId = this.selectedNode;
+
+        // Count relationships that will be deleted
+        const relationshipCount = this.relationships.filter(rel =>
+            rel.from === nodeId || rel.to === nodeId
+        ).length;
+
+        // Confirmation dialog with relationship count
+        const message = `Delete node ${nodeId}?\n\n` +
+            `This will permanently delete:\n` +
+            `• The node and all its content\n` +
+            `• ${relationshipCount} relationship(s) connected to this node\n\n` +
+            `This action cannot be undone.`;
+
+        if (!confirm(message)) {
+            return;
+        }
+
+        // Disable button during operation (prevent double-click)
+        if (this.deleteNodeBtn) {
+            this.deleteNodeBtn.disabled = true;
+        }
+
+        try {
+            // Call API to delete node and relationships
+            const response = await fetch(`${this.apiBaseUrl}/session/${this.sessionId}/nodes/${nodeId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Failed to delete node: ${errorData.detail || 'Unknown error'}`);
+            }
+
+            console.log(`✅ Successfully deleted node ${nodeId} from database`);
+
+            // Update frontend state
+            // 1. Filter relationships array
+            this.relationships = this.relationships.filter(rel =>
+                rel.from !== nodeId && rel.to !== nodeId
+            );
+
+            // 2. Remove SVG elements and delete from visualNodes Map
+            const visualNode = this.visualNodes.get(nodeId);
+            if (visualNode) {
+                visualNode.remove();  // Removes SVG elements from DOM
+            }
+            this.visualNodes.delete(nodeId);
+
+            // 3. Clear selection if deleted node was selected
+            if (this.selectedNode === nodeId) {
+                this.selectedNode = null;
+                // Clear editor canvas
+                if (this.editorCanvas) {
+                    this.editorCanvas.innerHTML = '';
+                }
+            }
+
+            // 4. Refresh UI based on view mode
+            if (this.viewMode === 'visual') {
+                await this.initializeVisualNetwork();
+            } else {
+                await this.loadSessionNodes();
+            }
+
+            console.log(`✅ Node ${nodeId} deleted successfully`);
+
+        } catch (error) {
+            console.error('Failed to delete node:', error);
+            alert(`Failed to delete node: ${error.message}`);
+            // Re-enable button on error so user can retry
+            if (this.deleteNodeBtn) {
+                this.deleteNodeBtn.disabled = false;
+            }
+        }
+    }
+
     handleNodeClick(e) {
         const nodeItem = e.target.closest('.node-item');
         if (nodeItem) {
@@ -360,6 +458,11 @@ class TemplateEditorCMS {
             // Update visual node selection
             this.updateVisualNodeSelection(nodeId);
 
+            // Enable delete button when a node is selected
+            if (this.deleteNodeBtn) {
+                this.deleteNodeBtn.disabled = false;
+            }
+
             this.loadNodeContent(nodeId);
         } else {
             console.log(`❌ No element found with [data-node-id="${nodeId}"]`);
@@ -371,6 +474,40 @@ class TemplateEditorCMS {
         this.visualNodes.forEach((visualNode, nodeId) => {
             visualNode.setSelected(nodeId === selectedNodeId);
         });
+    }
+
+    updateMultiSelectVisuals() {
+        // Update visual appearance for multi-selected nodes (relationship creation)
+        this.visualNodes.forEach((visualNode, nodeId) => {
+            const isInMultiSelect = this.selectedNodesForRelationship.has(nodeId);
+            const shape = visualNode.elements.shape;
+
+            if (isInMultiSelect) {
+                // Apply blue border for multi-selected nodes (use style for CSS specificity)
+                shape.style.stroke = '#007AFF'; // Same blue as regular selection
+                shape.style.strokeWidth = '3';
+            } else {
+                // Clear multi-select styling (preserve regular selection if applicable)
+                const isRegularSelection = this.selectedNode === nodeId;
+                if (!isRegularSelection) {
+                    shape.style.stroke = '';
+                    shape.style.strokeWidth = '';
+                }
+            }
+        });
+
+        console.log(`Multi-select updated: ${this.selectedNodesForRelationship.size} nodes selected`,
+                    Array.from(this.selectedNodesForRelationship));
+
+        // Update create relationship button state
+        if (this.createRelationshipBtn) {
+            this.createRelationshipBtn.disabled = this.selectedNodesForRelationship.size < 2;
+        }
+    }
+
+    showRelationshipDialog() {
+        // Placeholder method - Phase 3 will add actual modal dialog
+        console.log('Creating relationship between:', Array.from(this.selectedNodesForRelationship));
     }
 
     async loadNodeContent(nodeId) {
@@ -2600,6 +2737,12 @@ class TemplateEditorCMS {
         // Toggle state
         this.viewMode = this.viewMode === 'list' ? 'visual' : 'list';
 
+        // Clear multi-select when switching modes to prevent confusion
+        this.selectedNodesForRelationship.clear();
+        if (this.createRelationshipBtn) {
+            this.createRelationshipBtn.disabled = true;
+        }
+
         // Update the UI
         await this.updateViewMode();
 
@@ -3539,7 +3682,29 @@ class TemplateEditorCMS {
             // Add click handler
             this.elements.group.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.parent.selectNode(this.nodeId);
+
+                // Multi-select mode for relationship creation (Shift+Click in visual mode only)
+                if (e.shiftKey && this.parent.viewMode === 'visual') {
+                    // Toggle node in relationship selection set
+                    if (this.parent.selectedNodesForRelationship.has(this.nodeId)) {
+                        this.parent.selectedNodesForRelationship.delete(this.nodeId);
+                    } else {
+                        // Add the originally selected node first (if not already in the set)
+                        if (this.parent.selectedNode && !this.parent.selectedNodesForRelationship.has(this.parent.selectedNode)) {
+                            this.parent.selectedNodesForRelationship.add(this.parent.selectedNode);
+                        }
+                        this.parent.selectedNodesForRelationship.add(this.nodeId);
+                    }
+                    this.parent.updateMultiSelectVisuals();
+                } else {
+                    // Normal single-select mode (loads content, clears multi-select)
+                    this.parent.selectedNodesForRelationship.clear();
+                    // Disable create relationship button when clearing multi-select
+                    if (this.parent.createRelationshipBtn) {
+                        this.parent.createRelationshipBtn.disabled = true;
+                    }
+                    this.parent.selectNode(this.nodeId);
+                }
             });
 
             // Add hover effects and tooltip
@@ -3637,11 +3802,11 @@ class TemplateEditorCMS {
 
         setSelected(selected) {
             if (selected) {
-                this.elements.shape.setAttribute('stroke', '#007AFF');
-                this.elements.shape.setAttribute('stroke-width', '3');
+                this.elements.shape.style.stroke = '#007AFF';
+                this.elements.shape.style.strokeWidth = '3';
             } else {
-                this.elements.shape.removeAttribute('stroke');
-                this.elements.shape.removeAttribute('stroke-width');
+                this.elements.shape.style.stroke = '';
+                this.elements.shape.style.strokeWidth = '';
             }
         }
 
