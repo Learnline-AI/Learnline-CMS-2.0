@@ -64,6 +64,12 @@ class TemplateEditorCMS {
         this.relationships = []; // Will be populated from database during session loading
         this.selectedNodesForRelationship = new Set(); // Multi-select for relationship creation
 
+        // Relationship preview state
+        this.previewArrow = null; // Reference to preview arrow path element
+        this.previewButtons = null; // Reference to floating button container
+        this.previewFromNodeId = null; // Track preview arrow direction
+        this.previewToNodeId = null;
+
         // Session and Auto-Save state
         this.sessionId = null;
         this.autoSaveTimeout = null;
@@ -506,8 +512,224 @@ class TemplateEditorCMS {
     }
 
     showRelationshipDialog() {
-        // Placeholder method - Phase 3 will add actual modal dialog
-        console.log('Creating relationship between:', Array.from(this.selectedNodesForRelationship));
+        // Convert Set to Array and extract node IDs
+        const selectedNodes = Array.from(this.selectedNodesForRelationship);
+
+        // Validate that we have exactly 2 nodes
+        if (selectedNodes.length !== 2) {
+            console.error('Must select exactly 2 nodes to create relationship');
+            return;
+        }
+
+        // First selected = from, second selected = to
+        const fromNodeId = selectedNodes[0];
+        const toNodeId = selectedNodes[1];
+
+        // Store in state for flip functionality
+        this.previewFromNodeId = fromNodeId;
+        this.previewToNodeId = toNodeId;
+
+        console.log(`Creating relationship preview: ${fromNodeId} → ${toNodeId}`);
+
+        // Draw preview arrow
+        this.drawPreviewArrow(fromNodeId, toNodeId);
+
+        // Show floating buttons
+        this.showPreviewButtons();
+
+        // Add click-outside listener with 50ms delay to prevent immediate trigger
+        setTimeout(() => {
+            this.clickOutsideHandler = (event) => {
+                // Check if click is outside the preview buttons
+                if (this.previewButtons && !this.previewButtons.contains(event.target)) {
+                    console.log('Click outside detected - canceling preview');
+                    this.clearPreviewState();
+                }
+            };
+            document.addEventListener('click', this.clickOutsideHandler);
+        }, 50);
+    }
+
+    drawPreviewArrow(fromNodeId, toNodeId) {
+        // Get VisualNode instances
+        const fromNode = this.visualNodes.get(fromNodeId);
+        const toNode = this.visualNodes.get(toNodeId);
+
+        // Validate nodes exist
+        if (!fromNode || !toNode) {
+            console.error('Cannot draw preview arrow: nodes not found', { fromNodeId, toNodeId });
+            return;
+        }
+
+        // Define preview style (grey, semi-transparent, dotted)
+        const previewStyle = {
+            stroke: '#8E8E93',      // Grey color
+            strokeWidth: 2,
+            marker: 'arrowhead',    // Generic grey arrow marker
+            opacity: 0.5            // Semi-transparent
+        };
+
+        // Reuse existing sophisticated arrow drawing logic
+        const path = this.createStyledConnection(fromNode, toNode, previewStyle, null);
+
+        // Make it dotted (5px dash, 5px gap)
+        path.setAttribute('stroke-dasharray', '5,5');
+
+        // Add preview-specific class for easy identification
+        path.classList.add('preview-arrow');
+
+        // Store reference for later removal
+        this.previewArrow = path;
+
+        console.log('Preview arrow created:', { fromNodeId, toNodeId });
+    }
+
+    showPreviewButtons() {
+        // Get node instances for position calculation
+        const fromNode = this.visualNodes.get(this.previewFromNodeId);
+        const toNode = this.visualNodes.get(this.previewToNodeId);
+
+        if (!fromNode || !toNode) {
+            console.error('Cannot show preview buttons: nodes not found');
+            return;
+        }
+
+        // Calculate midpoint in SVG coordinate space
+        const svgMidX = (fromNode.position.x + toNode.position.x) / 2;
+        const svgMidY = (fromNode.position.y + toNode.position.y) / 2;
+
+        // Get SVG element and network content group
+        const svg = document.getElementById('visual-network-svg');
+        const networkContent = document.getElementById('network-content');
+
+        // Create SVG point for coordinate transformation
+        const point = svg.createSVGPoint();
+        point.x = svgMidX;
+        point.y = svgMidY;
+
+        // Transform SVG coordinates to screen coordinates using CTM (Current Transformation Matrix)
+        const screenPoint = point.matrixTransform(networkContent.getCTM());
+
+        // Get SVG bounding rectangle for screen offset
+        const svgRect = svg.getBoundingClientRect();
+
+        // Calculate final screen position
+        const finalX = screenPoint.x + svgRect.left;
+        const finalY = screenPoint.y + svgRect.top;
+
+        // Create button container
+        const container = document.createElement('div');
+        container.className = 'relationship-preview-buttons';
+        container.style.position = 'fixed';
+        container.style.left = `${finalX}px`;
+        container.style.top = `${finalY}px`;
+        container.style.transform = 'translate(-50%, -170%)'; // Position above midpoint
+        container.style.zIndex = '10000';
+
+        // Create flip button
+        const flipBtn = document.createElement('button');
+        flipBtn.className = 'preview-btn flip-btn';
+        flipBtn.innerHTML = '<i class="fas fa-exchange-alt"></i>';
+        flipBtn.title = 'Flip arrow direction';
+        flipBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent click-outside handler
+            this.flipPreviewDirection();
+        });
+
+        // Create accept button
+        const acceptBtn = document.createElement('button');
+        acceptBtn.className = 'preview-btn accept-btn';
+        acceptBtn.innerHTML = '<i class="fas fa-check"></i>';
+        acceptBtn.title = 'Accept relationship';
+        acceptBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent click-outside handler
+            this.acceptPreview();
+        });
+
+        // Assemble container
+        container.appendChild(flipBtn);
+        container.appendChild(acceptBtn);
+
+        // Append to body
+        document.body.appendChild(container);
+
+        // Store reference
+        this.previewButtons = container;
+
+        console.log('Preview buttons created at:', { finalX, finalY });
+    }
+
+    flipPreviewDirection() {
+        console.log('Flipping arrow direction');
+
+        // Remove current preview arrow
+        if (this.previewArrow) {
+            this.previewArrow.remove();
+            this.previewArrow = null;
+        }
+
+        // Swap from and to node IDs
+        [this.previewFromNodeId, this.previewToNodeId] = [this.previewToNodeId, this.previewFromNodeId];
+
+        // Redraw arrow in opposite direction
+        this.drawPreviewArrow(this.previewFromNodeId, this.previewToNodeId);
+
+        console.log(`Arrow flipped: ${this.previewFromNodeId} → ${this.previewToNodeId}`);
+    }
+
+    acceptPreview() {
+        console.log('=== RELATIONSHIP ACCEPTED ===');
+        console.log(`From: ${this.previewFromNodeId}`);
+        console.log(`To: ${this.previewToNodeId}`);
+        console.log('Phase 3: Logging only. Phase 4 will add API call to save relationship.');
+        console.log('=============================');
+
+        // Clean up preview UI
+        this.clearPreviewState();
+    }
+
+    clearPreviewState() {
+        console.log('Clearing preview state');
+
+        // Remove preview arrow from DOM
+        if (this.previewArrow) {
+            this.previewArrow.remove();
+            this.previewArrow = null;
+        }
+
+        // Remove button container from DOM
+        if (this.previewButtons) {
+            this.previewButtons.remove();
+            this.previewButtons = null;
+        }
+
+        // Reset preview state variables
+        this.previewFromNodeId = null;
+        this.previewToNodeId = null;
+
+        // Clear multi-select Set
+        this.selectedNodesForRelationship.clear();
+
+        // Remove visual indicators (green borders) from all nodes
+        this.visualNodes.forEach((visualNode, nodeId) => {
+            const element = visualNode.element;
+            if (element) {
+                element.classList.remove('selected-for-relationship');
+            }
+        });
+
+        // Disable "Create Relationship" button
+        if (this.createRelationshipBtn) {
+            this.createRelationshipBtn.disabled = true;
+        }
+
+        // Remove click-outside event listener
+        if (this.clickOutsideHandler) {
+            document.removeEventListener('click', this.clickOutsideHandler);
+            this.clickOutsideHandler = null;
+        }
+
+        console.log('Preview state cleared');
     }
 
     async loadNodeContent(nodeId) {
@@ -3536,6 +3758,8 @@ class TemplateEditorCMS {
 
         // Insert before nodes so paths appear behind
         this.networkContent.insertBefore(path, this.networkContent.firstChild);
+
+        return path; // Return path reference for preview functionality
     }
 
 

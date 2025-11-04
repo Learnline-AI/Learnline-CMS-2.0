@@ -4063,3 +4063,67 @@ body {
     gap: 8px !important;
 }
 
+/* ============================================
+   Relationship Preview Buttons
+   ============================================ */
+
+/* Container for flip and accept buttons */
+.relationship-preview-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    pointer-events: auto;
+    z-index: 10000;
+}
+
+/* Base button styling for preview controls */
+.preview-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    font-size: 14px;
+    color: white;
+    padding: 0;
+}
+
+/* Hover effect for all preview buttons */
+.preview-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Active/pressed state */
+.preview-btn:active {
+    transform: scale(0.95);
+}
+
+/* Flip button - blue/grey color */
+.flip-btn {
+    background: #007AFF;
+}
+
+.flip-btn:hover {
+    background: #0051D5;
+}
+
+/* Accept button - green color */
+.accept-btn {
+    background: #51CF66;
+}
+
+.accept-btn:hover {
+    background: #40C057;
+}
+
+/* Preview arrow additional styling (if needed) */
+.preview-arrow {
+    cursor: default;
+}
+
