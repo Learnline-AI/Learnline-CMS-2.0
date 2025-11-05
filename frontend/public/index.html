@@ -401,6 +401,51 @@
         </main>
     </div>
 
+    <!-- AI Chat Slide-Out Drawer -->
+    <div class="chat-slide-container" id="chat-slide-container">
+        <button class="chat-tab" id="chat-tab" title="Toggle AI Assistant">
+            <i class="fas fa-comments"></i>
+            <span>AI Assistant</span>
+        </button>
+        <div class="chat-panel-overlay" id="chat-panel-overlay">
+            <div class="chat-panel-header">
+                <h3>
+                    <i class="fas fa-robot"></i> AI Assistant
+                    <span id="connection-status" class="status-dot status-disconnected" title="Disconnected"></span>
+                </h3>
+                <button class="close-chat-btn" id="close-chat-drawer" title="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="chat-container">
+                <div class="chat-messages" id="chat-messages">
+                    <div class="chat-welcome">
+                        <i class="fas fa-robot"></i>
+                        <p>AI Assistant ready. I can help you create and edit educational content.</p>
+                    </div>
+                </div>
+                <div class="chat-input-container">
+                    <div class="chat-context-indicator" id="chat-context-indicator">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span id="current-node-name">No node selected</span>
+                    </div>
+                    <div class="chat-input-wrapper">
+                        <textarea
+                            id="chat-input"
+                            class="chat-input"
+                            placeholder="Ask me to add components, edit content..."
+                            rows="2"
+                        ></textarea>
+                        <button id="send-chat-btn" class="send-chat-btn" title="Send message">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="websocket-chat.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

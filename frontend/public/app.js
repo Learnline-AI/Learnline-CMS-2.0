@@ -38,6 +38,13 @@ class TemplateEditorCMS {
         // Content/Question mode state
         this.currentMode = 'content'; // 'content' or 'question'
 
+        // Chat panel state
+        this.isChatPanelOpen = false;
+        this.chatPanel = null;
+        this.openChatBtn = null;
+        this.closeChatBtn = null;
+        this.minimizeChatBtn = null;
+
         // Visual network zoom/pan state
         this.visualScale = 1;
         this.visualPanX = 0;
@@ -77,6 +84,10 @@ class TemplateEditorCMS {
         this.saveStatus = 'idle'; // idle, saving, saved, error
         this.sessionReadyPromise = null; // Track session readiness
 
+        // Context update debouncing
+        this.contextUpdateTimeout = null;
+        this.contextUpdateDelay = 500; // 500ms debounce for context updates
+
         this.initializeElements();
         this.bindEvents();
         this.initializeTextFormatting();
@@ -88,6 +99,10 @@ class TemplateEditorCMS {
             console.log('Session initialization completed');
             // Restore view mode state AFTER session loading completes
             await this.restoreViewModeState();
+            // Initialize WebSocket chat after session is ready
+            if (typeof initializeWebSocketChat === 'function') {
+                initializeWebSocketChat(this);
+            }
         }).catch(error => {
             console.error('Session initialization failed:', error);
             throw error; // Re-throw to maintain promise chain
@@ -162,6 +177,16 @@ class TemplateEditorCMS {
         this.deleteNodeBtn = document.getElementById('delete-node-btn');
         this.createRelationshipBtn = document.getElementById('create-relationship-btn');
 
+        // Chat slide-out drawer elements
+        this.chatSlideContainer = document.getElementById('chat-slide-container');
+        this.chatTab = document.getElementById('chat-tab');
+        this.chatPanelOverlay = document.getElementById('chat-panel-overlay');
+        this.closeChatDrawer = document.getElementById('close-chat-drawer');
+        this.chatInput = document.getElementById('chat-input');
+        this.sendChatBtn = document.getElementById('send-chat-btn');
+        this.chatMessages = document.getElementById('chat-messages');
+        this.chatContextIndicator = document.getElementById('current-node-name');
+
         // Selection tracking
         this.selectedComponent = null;
         this.hasTextSelection = false;
@@ -219,6 +244,20 @@ class TemplateEditorCMS {
             this.toggleNodePanelBtn.addEventListener('click', () => this.toggleNodePanel());
         }
 
+        // Chat slide-out drawer events
+        if (this.chatTab) {
+            this.chatTab.addEventListener('click', () => this.toggleChatDrawer());
+        }
+        if (this.closeChatDrawer) {
+            this.closeChatDrawer.addEventListener('click', () => this.toggleChatDrawer());
+        }
+        if (this.sendChatBtn) {
+            this.sendChatBtn.addEventListener('click', () => this.sendChatMessage());
+        }
+        if (this.chatInput) {
+            this.chatInput.addEventListener('keydown', (e) => this.handleChatKeydown(e));
+        }
+
         // View mode toggle events
         if (this.viewModeToggleBtn) {
             this.viewModeToggleBtn.addEventListener('click', async () => await this.toggleViewMode());
@@ -269,6 +308,9 @@ class TemplateEditorCMS {
 
         // Restore collapsed state from localStorage
         this.restoreNodePanelState();
+
+        // Restore chat panel state from localStorage
+        this.restoreChatPanelState();
 
         // Restore view mode state from localStorage
         // View mode state will be restored after session loading completes
@@ -467,6 +509,14 @@ class TemplateEditorCMS {
             // Enable delete button when a node is selected
             if (this.deleteNodeBtn) {
                 this.deleteNodeBtn.disabled = false;
+            }
+
+            // Send context update to backend (debounced)
+            this.sendContextUpdate();
+
+            // Update chat context indicator if chat is open
+            if (this.isChatPanelOpen) {
+                this.updateChatContext();
             }
 
             this.loadNodeContent(nodeId);
@@ -3179,6 +3229,133 @@ class TemplateEditorCMS {
         }
     }
 
+    // Chat Slide-Out Drawer Management
+    toggleChatDrawer() {
+        // Toggle open class on container
+        this.isChatPanelOpen = !this.isChatPanelOpen;
+
+        if (this.chatSlideContainer) {
+            this.chatSlideContainer.classList.toggle('open');
+        }
+
+        // Save state to localStorage
+        localStorage.setItem('chatPanelOpen', this.isChatPanelOpen);
+
+        // Update context indicator when opening
+        if (this.isChatPanelOpen && this.selectedNode) {
+            this.updateChatContext();
+            // Send context update to sync backend with current state
+            this.sendContextUpdate();
+        }
+
+        console.log(`Chat drawer ${this.isChatPanelOpen ? 'opened' : 'closed'}`);
+    }
+
+    updateChatContext() {
+        // Update the context indicator to show current node
+        if (this.chatContextIndicator && this.selectedNode) {
+            const selectedNodeElement = this.nodeList.querySelector(`[data-node-id="${this.selectedNode}"]`);
+            if (selectedNodeElement) {
+                const nodeName = selectedNodeElement.querySelector('.node-name')?.textContent || this.selectedNode;
+                this.chatContextIndicator.textContent = nodeName;
+            }
+        }
+    }
+
+    sendContextUpdate() {
+        // Debounced context update to backend via WebSocket
+        // Clear any pending context update
+        if (this.contextUpdateTimeout) {
+            clearTimeout(this.contextUpdateTimeout);
+        }
+
+        // Set new timeout
+        this.contextUpdateTimeout = setTimeout(() => {
+            // Check if WebSocket is available and connected
+            if (typeof window.mcpClient !== 'undefined' && window.mcpClient) {
+                const contextData = {
+                    type: 'context_update',
+                    context: {
+                        node_id: this.selectedNode,
+                        session_id: this.sessionId,
+                        screen: this.viewMode === 'visual' ? 'visual' : 'editor',
+                        action: 'node_selected'
+                    }
+                };
+
+                window.mcpClient.send(contextData);
+                console.log('📍 Context update sent:', contextData);
+            } else {
+                console.log('⚠️ WebSocket not available for context update');
+            }
+        }, this.contextUpdateDelay);
+    }
+
+    sendChatMessage() {
+        // Get message from input
+        const message = this.chatInput.value.trim();
+        if (!message) return;
+
+        // Add user message to chat
+        this.addChatMessage('user', message);
+
+        // Clear input
+        this.chatInput.value = '';
+        this.chatInput.style.height = 'auto';
+
+        // TODO: Send to backend WebSocket/API
+        console.log('Chat message:', message, 'Node:', this.currentNodeId);
+
+        // Placeholder response
+        setTimeout(() => {
+            this.addChatMessage('ai', 'Chat functionality connected! Backend integration coming soon...');
+        }, 500);
+    }
+
+    handleChatKeydown(e) {
+        // Send on Enter (but allow Shift+Enter for new line)
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            this.sendChatMessage();
+        }
+    }
+
+    addChatMessage(type, content) {
+        // Create message element
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message chat-message-${type}`;
+
+        const messageContent = document.createElement('div');
+        messageContent.className = 'chat-message-content';
+        messageContent.textContent = content;
+
+        messageDiv.appendChild(messageContent);
+
+        // Add timestamp
+        const timestamp = document.createElement('div');
+        timestamp.className = 'chat-message-timestamp';
+        timestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        messageDiv.appendChild(timestamp);
+
+        // Append to messages container
+        this.chatMessages.appendChild(messageDiv);
+
+        // Scroll to bottom
+        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    }
+
+    restoreChatPanelState() {
+        // Check localStorage for saved state
+        const savedState = localStorage.getItem('chatPanelOpen');
+
+        if (savedState === 'true') {
+            this.isChatPanelOpen = true;
+            if (this.chatSlideContainer) {
+                this.chatSlideContainer.classList.add('open');
+            }
+        }
+    }
+
     // View Mode Management Methods
     async toggleViewMode() {
         // Toggle state
@@ -3461,8 +3638,10 @@ class TemplateEditorCMS {
     handleKeyDown(e) {
         if (e.code === 'Space') {
             this.isSpacePressed = true;
-            // Prevent page scroll when space is pressed
-            e.preventDefault();
+            // Only prevent page scroll if not typing in input/textarea
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+            }
         }
         if (e.code === 'AltLeft' || e.code === 'AltRight') {
             this.isAltPressed = true;

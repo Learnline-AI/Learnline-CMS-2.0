@@ -116,6 +116,39 @@ class MCPServer:
                     # Keep connection alive and receive any client messages
                     data = await websocket.receive_text()
                     logger.info(f"Received from client: {data}")
+
+                    # Parse and process client messages
+                    try:
+                        message = json.loads(data)
+                        message_type = message.get('type')
+
+                        if message_type == 'context_update':
+                            # Update backend context
+                            context_data = message.get('context', {})
+                            session_id = context_data.get('session_id')
+                            node_id = context_data.get('node_id')
+                            screen = context_data.get('screen', 'editor')
+                            action = context_data.get('action', 'unknown')
+
+                            # Update context instance
+                            if session_id:
+                                self.context.set_session(session_id)
+                            if node_id:
+                                self.context.set_node(node_id)
+                            if screen:
+                                self.context.set_screen(screen)
+
+                            logger.info(f"Context updated: session={session_id}, node={node_id}, screen={screen}, action={action}")
+
+                        elif message_type == 'chat_message':
+                            # Chat messages will be handled by LLM integration (future)
+                            logger.info(f"Chat message received: {message.get('content', '')[:50]}...")
+
+                    except json.JSONDecodeError:
+                        logger.error(f"Invalid JSON received: {data}")
+                    except Exception as e:
+                        logger.error(f"Error processing message: {e}")
+
             except WebSocketDisconnect:
                 self.websocket_clients.remove(websocket)
                 logger.info(f"WebSocket client disconnected. Total clients: {len(self.websocket_clients)}")
