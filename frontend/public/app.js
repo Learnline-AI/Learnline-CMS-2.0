@@ -179,7 +179,7 @@ class TemplateEditorCMS {
 
         // Chat slide-out drawer elements
         this.chatSlideContainer = document.getElementById('chat-slide-container');
-        this.chatTab = document.getElementById('chat-tab');
+        this.chatTab = document.getElementById('chat-tab'); // Legacy - may not exist if using animated button
         this.chatPanelOverlay = document.getElementById('chat-panel-overlay');
         this.closeChatDrawer = document.getElementById('close-chat-drawer');
         this.chatInput = document.getElementById('chat-input');
@@ -245,6 +245,10 @@ class TemplateEditorCMS {
         }
 
         // Chat slide-out drawer events
+        // Wire up animated chat button click handler
+        this.setupAnimatedChatButton();
+        
+        // Legacy chat tab (if exists)
         if (this.chatTab) {
             this.chatTab.addEventListener('click', () => this.toggleChatDrawer());
         }
@@ -899,6 +903,11 @@ class TemplateEditorCMS {
             }
 
             const result = await response.json();
+            
+            // Trigger checkmark animation on success
+            if (result.success) {
+                this.triggerCheckmarkAnimation();
+            }
             console.log('Relationship saved successfully:', result);
 
             // Add to local relationships array (frontend format!)
@@ -3010,6 +3019,9 @@ class TemplateEditorCMS {
         URL.revokeObjectURL(url);
 
         console.log(`Exported ${format.toUpperCase()} content for ${this.selectedNode}`);
+        
+        // Trigger smile animation for export
+        this.triggerSmileAnimation();
     }
 
     getNodeTitle() {
@@ -3229,6 +3241,58 @@ class TemplateEditorCMS {
         }
     }
 
+    // Animated Chat Button Setup
+    setupAnimatedChatButton() {
+        // Wait for animated button to be initialized
+        const checkButton = () => {
+            if (window.animatedChatButton && window.animatedChatButton.getButton) {
+                const button = window.animatedChatButton.getButton();
+                if (button) {
+                    // Track if button was dragged
+                    let wasDragged = false;
+                    let dragStartTime = 0;
+                    
+                    button.addEventListener('mousedown', () => {
+                        wasDragged = false;
+                        dragStartTime = Date.now();
+                    });
+                    
+                    button.addEventListener('mousemove', () => {
+                        if (Date.now() - dragStartTime > 100) {
+                            wasDragged = true;
+                        }
+                    });
+                    
+                    button.addEventListener('click', (e) => {
+                        // Only trigger if it wasn't a drag (quick click)
+                        if (!wasDragged && Date.now() - dragStartTime < 200) {
+                            this.toggleChatDrawer();
+                        }
+                    });
+                    console.log('Animated chat button wired up');
+                }
+            } else {
+                // Retry after a short delay
+                setTimeout(checkButton, 100);
+            }
+        };
+        checkButton();
+    }
+
+    // Trigger checkmark animation (for save operations)
+    triggerCheckmarkAnimation() {
+        if (window.animatedChatButton && window.animatedChatButton.showCheckmark) {
+            window.animatedChatButton.showCheckmark();
+        }
+    }
+
+    // Trigger smile animation (for export/milestone operations)
+    triggerSmileAnimation() {
+        if (window.animatedChatButton && window.animatedChatButton.showSmile) {
+            window.animatedChatButton.showSmile();
+        }
+    }
+
     // Chat Slide-Out Drawer Management
     toggleChatDrawer() {
         // Toggle open class on container
@@ -3443,6 +3507,8 @@ class TemplateEditorCMS {
             if (response.ok && result.status === 'saved') {
                 console.log('Node positions saved to database:', positions);
                 this.showLayoutFeedback('Positions saved!', 'success');
+                // Trigger checkmark animation
+                this.triggerCheckmarkAnimation();
                 return true;
             } else {
                 throw new Error(result.message || 'Failed to save positions');
@@ -5813,6 +5879,8 @@ class TemplateEditorCMS {
             if (result.status === 'saved') {
                 this.saveStatus = 'saved';
                 this.lastSaved = new Date();
+                // Trigger checkmark animation
+                this.triggerCheckmarkAnimation();
             } else {
                 this.saveStatus = 'error';
             }

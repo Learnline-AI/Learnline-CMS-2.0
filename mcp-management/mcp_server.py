@@ -8,9 +8,15 @@ import json
 import logging
 import os
 from typing import Any, Dict, List
+from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+
+# Load environment variables from .env file
+from dotenv import load_dotenv
+env_path = Path(__file__).parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -141,8 +147,8 @@ class MCPServer:
                             logger.info(f"Context updated: session={session_id}, node={node_id}, screen={screen}, action={action}")
 
                         elif message_type == 'chat_message':
-                            # Chat messages will be handled by LLM integration (future)
-                            logger.info(f"Chat message received: {message.get('content', '')[:50]}...")
+                            # Handle chat messages with LLM integration
+                            await self.handle_chat_message(websocket, message)
 
                     except json.JSONDecodeError:
                         logger.error(f"Invalid JSON received: {data}")
@@ -152,6 +158,62 @@ class MCPServer:
             except WebSocketDisconnect:
                 self.websocket_clients.remove(websocket)
                 logger.info(f"WebSocket client disconnected. Total clients: {len(self.websocket_clients)}")
+
+    async def handle_chat_message(self, websocket: WebSocket, message: Dict[str, Any]):
+        """Handle chat messages with LLM integration"""
+        try:
+            # Extract message data
+            content = message.get('content', '')
+            file_data = message.get('file')  # Base64 encoded file or None
+            file_name = message.get('fileName', 'unknown')
+            session_id = self.context.session_id
+
+            logger.info(f"Processing chat message: {content[:50]}... (file: {file_name if file_data else 'none'})")
+
+            # Send "thinking" notification
+            await websocket.send_text(json.dumps({
+                'type': 'tool_start',
+                'tool': 'processing_message'
+            }))
+
+            # Initialize LLM backend (use Claude for native PDF support)
+            from llm_backend import LLMBackend
+            llm = LLMBackend(provider="claude")
+
+            # Route to appropriate handler
+            if file_data:
+                # Decode base64 file
+                import base64
+                file_bytes = base64.b64decode(file_data)
+                logger.info(f"Processing file: {file_name} ({len(file_bytes)} bytes)")
+
+                # Route to multimodal handler
+                response = await llm.chat_with_file(content, file_bytes, session_id, file_type="auto")
+            else:
+                # Text-only chat
+                response = await llm.chat(content, session_id)
+
+            # Send response back to frontend
+            await websocket.send_text(json.dumps({
+                'type': 'ai_response',
+                'content': response
+            }))
+
+            # Send completion notification
+            await websocket.send_text(json.dumps({
+                'type': 'tool_complete',
+                'tool': 'processing_message'
+            }))
+
+            logger.info(f"Chat message processed successfully")
+
+        except Exception as e:
+            logger.error(f"Error processing chat message: {e}", exc_info=True)
+            # Send error message to frontend
+            await websocket.send_text(json.dumps({
+                'type': 'error',
+                'error': f"Error processing message: {str(e)}"
+            }))
 
     async def broadcast_change(self, event: Dict[str, Any]):
         """Broadcast change events to all connected WebSocket clients"""

@@ -103,6 +103,36 @@ class MCPTools:
                     },
                     "required": ["session_id", "from_node_id", "to_node_id"]
                 }
+            },
+            {
+                "name": "batch_add_components",
+                "description": "Add multiple educational components to a node in a single operation (efficient for PDFs)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "node_id": {"type": "string", "description": "Node ID (e.g., N002)"},
+                        "components": {
+                            "type": "array",
+                            "description": "Array of components to add",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "enum": VALID_COMPONENT_TYPES,
+                                        "description": "Component type"
+                                    },
+                                    "parameters": {
+                                        "type": "object",
+                                        "description": "Component-specific parameters"
+                                    }
+                                },
+                                "required": ["type", "parameters"]
+                            }
+                        }
+                    },
+                    "required": ["node_id", "components"]
+                }
             }
         ]
 
@@ -121,6 +151,8 @@ class MCPTools:
                 return await self._delete_component(arguments)
             elif name == "create_relationship":
                 return await self._create_relationship(arguments)
+            elif name == "batch_add_components":
+                return await self._batch_add_components(arguments)
             else:
                 return {"content": [{"type": "text", "text": f"Unknown tool: {name}"}], "isError": True}
         except Exception as e:
@@ -316,5 +348,69 @@ class MCPTools:
             "content": [{
                 "type": "text",
                 "text": f"✓ Created {relationship_type} relationship: {from_node_id} → {to_node_id}" + (f" ({explanation})" if explanation else "")
+            }]
+        }
+
+    async def _batch_add_components(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Add multiple components to a node in a single transaction"""
+        node_id = args["node_id"]
+        components = args["components"]
+
+        if not components or len(components) == 0:
+            return {
+                "content": [{"type": "text", "text": "No components provided"}],
+                "isError": True
+            }
+
+        # Validate all component types first
+        for idx, comp in enumerate(components):
+            comp_type = comp.get("type")
+            if comp_type not in VALID_COMPONENT_TYPES:
+                return {
+                    "content": [{
+                        "type": "text",
+                        "text": f"Invalid component type at index {idx}: {comp_type}. Valid types: {', '.join(VALID_COMPONENT_TYPES)}"
+                    }],
+                    "isError": True
+                }
+
+        # Fetch current components
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{self.context.backend_url}/nodes/{node_id}/components")
+            current_components = response.json().get("components", [])
+
+        # Build new component sequence
+        next_order = len(current_components) + 1
+        new_components = []
+
+        for comp in components:
+            new_components.append({
+                "type": comp["type"],
+                "order": next_order,
+                "parameters": comp["parameters"]
+            })
+            next_order += 1
+
+        # Combine with existing
+        all_components = current_components + new_components
+
+        # Save all components in single transaction
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                f"{self.context.backend_url}/nodes/{node_id}/components",
+                json={"components": all_components}
+            )
+
+        self.context.log_action("batch_add_components", {
+            "node_id": node_id,
+            "count": len(components),
+            "types": [c["type"] for c in components]
+        })
+
+        component_summary = ", ".join([c["type"] for c in components])
+        return {
+            "content": [{
+                "type": "text",
+                "text": f"✓ Added {len(components)} components to node {node_id}: {component_summary}"
             }]
         }

@@ -1,12 +1,20 @@
 """
 Dual LLM Backend Support
 Supports both Gemini (free tier) and Claude (best quality)
+With multimodal support for PDFs and images
 """
 
 import os
+import sys
 import logging
-from typing import Dict, List, Any, Optional
+import base64
+from typing import Dict, List, Any, Optional, Union
+from pathlib import Path
 import httpx
+
+# Add python-services to path for component schemas
+sys.path.insert(0, str(Path(__file__).parent.parent / "python-services"))
+from component_schemas import build_component_prompt_section
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +80,7 @@ class LLMBackend:
 
     async def chat(self, user_message: str, session_id: Optional[str] = None) -> str:
         """
-        Send a chat message and handle tool calls
+        Send a text-only chat message and handle tool calls
 
         Args:
             user_message: User's message
@@ -95,6 +103,66 @@ class LLMBackend:
         else:
             return await self._chat_claude(user_message, tools, system_message)
 
+    async def chat_with_file(self, user_message: str, file_data: Union[bytes, str],
+                            session_id: Optional[str] = None, file_type: str = "auto") -> str:
+        """
+        Send a chat message with attached file (PDF or image)
+
+        Args:
+            user_message: User's message
+            file_data: File bytes or path string
+            session_id: Optional session ID for context
+            file_type: 'pdf', 'image', or 'auto' (auto-detect)
+
+        Returns:
+            LLM's final response describing the file and/or tool execution result
+        """
+        # Auto-detect file type if needed
+        if file_type == "auto":
+            file_type = self._detect_file_type(file_data)
+
+        # Validate file type
+        if file_type not in ["pdf", "image"]:
+            return f"Unsupported file type: {file_type}. Supported types: pdf, image"
+
+        # Get MCP tools
+        tools = await self._get_mcp_tools()
+
+        # Get context
+        context = await self._get_context()
+
+        # Prepare messages
+        system_message = self._build_system_message(context)
+
+        # Route to appropriate provider with file support
+        try:
+            if self.provider == "gemini":
+                return await self._chat_gemini(user_message, tools, system_message, file_data, file_type)
+            else:
+                return await self._chat_claude(user_message, tools, system_message, file_data, file_type)
+        except Exception as e:
+            logger.error(f"Error in chat_with_file: {e}")
+            return f"Error processing file: {str(e)}"
+
+    def _detect_file_type(self, file_data: Union[bytes, str]) -> str:
+        """Auto-detect file type from bytes or path"""
+        if isinstance(file_data, str):
+            # It's a file path - check extension
+            if file_data.lower().endswith('.pdf'):
+                return "pdf"
+            elif file_data.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+                return "image"
+        elif isinstance(file_data, bytes):
+            # Check file magic bytes
+            if file_data[:4] == b'%PDF':
+                return "pdf"
+            elif file_data[:2] == b'\xff\xd8':  # JPEG
+                return "image"
+            elif file_data[:8] == b'\x89PNG\r\n\x1a\n':  # PNG
+                return "image"
+
+        return "unknown"
+
     async def _get_mcp_tools(self) -> List[Dict[str, Any]]:
         """Fetch MCP tools from server"""
         async with httpx.AsyncClient() as client:
@@ -116,21 +184,94 @@ class LLMBackend:
             return "No context available"
 
     def _build_system_message(self, context: str) -> str:
-        """Build system message with context"""
+        """Build system message with context and component knowledge"""
+        # Get component documentation from schemas
+        component_guide = build_component_prompt_section()
+
         return f"""You are an AI assistant helping to manage an educational CMS for K-12 math lessons.
 
 {context}
 
+# Available Educational Components
+
+{component_guide}
+
+# Component Selection Guidelines
+
+When analyzing educational content:
+- Use **hero-number** for visual fraction representations, part-of-whole relationships
+- Use **worked-example** for step-by-step problem solving with solutions
+- Use **step-sequence** for ordered instructions or multi-step processes
+- Use **definition** for formal mathematical terms (not plain paragraphs)
+- Use **memory-trick** for mnemonics and helpful shortcuts
+- Use **callout-box** for important notes, warnings, or tips
+- Prefer structured components over plain paragraphs when possible
+
+# Available Tools
+
 You have access to tools to:
-- Add educational components (headings, paragraphs, definitions, worked examples, etc.)
-- Edit existing components
-- Delete components
-- Create curriculum relationships between nodes
+- **batch_add_components**: Add multiple components at once (efficient for PDFs)
+- **add_component**: Add a single component
+- **edit_component**: Modify existing components
+- **delete_component**: Remove components (requires confirmation)
+- **create_relationship**: Link nodes in the curriculum graph
 
 When the user asks to modify content, use the appropriate tools. Always confirm actions with clear feedback."""
 
-    async def _chat_gemini(self, user_message: str, tools: List[Dict], system_message: str) -> str:
-        """Chat with Gemini"""
+    # ============ File Processing Utilities ============
+
+    def _encode_image_to_base64(self, image_data: bytes) -> str:
+        """Encode image bytes to base64 string"""
+        return base64.standard_b64encode(image_data).decode('utf-8')
+
+    def _encode_pdf_to_base64(self, pdf_data: bytes) -> str:
+        """Encode PDF bytes to base64 string"""
+        return base64.standard_b64encode(pdf_data).decode('utf-8')
+
+    def _convert_pdf_to_image(self, pdf_path: str, page_number: int = 1) -> bytes:
+        """
+        Convert PDF page to image using Vision AI's converter
+        Reuses existing battle-tested conversion logic
+        """
+        try:
+            # Import Vision AI's processor
+            import sys
+            sys.path.append(str(Path(__file__).parent.parent / "python-services"))
+            from vision_processor import VisionProcessor
+
+            processor = VisionProcessor()
+            # Use Vision AI's proven PDF→Image conversion
+            pil_image = processor._convert_pdf_page_to_image(pdf_path, page_number)
+
+            # Convert PIL Image to bytes
+            from io import BytesIO
+            buffer = BytesIO()
+            pil_image.save(buffer, format='JPEG', quality=85)
+            return buffer.getvalue()
+
+        except Exception as e:
+            logger.error(f"PDF conversion failed: {e}")
+            raise ValueError(f"Could not convert PDF to image: {str(e)}")
+
+    def _validate_file_size(self, file_data: bytes, max_size_mb: int = 5) -> bool:
+        """Validate file size is within limits"""
+        size_mb = len(file_data) / (1024 * 1024)
+        if size_mb > max_size_mb:
+            raise ValueError(f"File size ({size_mb:.1f}MB) exceeds limit ({max_size_mb}MB)")
+        return True
+
+    async def _chat_gemini(self, user_message: str, tools: List[Dict], system_message: str,
+                           file_data: Optional[Union[bytes, str]] = None, file_type: str = "pdf") -> str:
+        """
+        Chat with Gemini (supports image processing, PDF requires conversion)
+
+        Args:
+            user_message: Text message from user
+            tools: MCP tools available
+            system_message: System context
+            file_data: Optional PDF or image bytes (or path for PDF)
+            file_type: 'pdf' or 'image'
+        """
         from google.genai import types
 
         # Convert MCP tools to Gemini format
@@ -142,10 +283,56 @@ When the user asks to modify content, use the appropriate tools. Always confirm 
             system_instruction=system_message
         )
 
+        # Build content parts
+        content_parts = []
+
+        # Add file if provided
+        if file_data:
+            try:
+                if file_type == "pdf":
+                    # Gemini doesn't support PDF natively - convert to image first
+                    # If file_data is a path string, use it directly
+                    if isinstance(file_data, str):
+                        pdf_path = file_data
+                    else:
+                        # Save bytes to temp file for conversion
+                        import tempfile
+                        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
+                            tmp.write(file_data)
+                            pdf_path = tmp.name
+
+                    # Convert PDF page to image using Vision AI's converter
+                    image_bytes = self._convert_pdf_to_image(pdf_path, page_number=1)
+
+                    # Clean up temp file if we created one
+                    if not isinstance(file_data, str):
+                        os.unlink(pdf_path)
+                else:
+                    # Direct image bytes
+                    image_bytes = file_data if isinstance(file_data, bytes) else file_data.encode()
+
+                # Validate size
+                self._validate_file_size(image_bytes)
+
+                # Add image part to Gemini message
+                image_part = types.Part.from_bytes(
+                    data=image_bytes,
+                    mime_type="image/jpeg"
+                )
+                content_parts.append(image_part)
+                logger.info(f"Added {file_type} (as image) to Gemini message")
+
+            except Exception as e:
+                logger.error(f"Failed to process file for Gemini: {e}")
+                return f"Error processing file: {str(e)}"
+
+        # Add text part
+        content_parts.append(types.Part.from_text(user_message))
+
         # Send message
         response = self.gemini_client.models.generate_content(
             model=self.model,
-            contents=user_message,
+            contents=content_parts,
             config=config
         )
 
@@ -166,10 +353,52 @@ When the user asks to modify content, use the appropriate tools. Always confirm 
         # Return text response
         return response.text
 
-    async def _chat_claude(self, user_message: str, tools: List[Dict], system_message: str) -> str:
-        """Chat with Claude"""
+    async def _chat_claude(self, user_message: str, tools: List[Dict], system_message: str,
+                           file_data: Optional[Union[bytes, str]] = None, file_type: str = "pdf") -> str:
+        """
+        Chat with Claude (supports native PDF and image processing)
+
+        Args:
+            user_message: Text message from user
+            tools: MCP tools available
+            system_message: System context
+            file_data: Optional PDF or image bytes
+            file_type: 'pdf' or 'image'
+        """
         # Convert MCP tools to Claude format
         claude_tools = self._convert_tools_to_claude(tools)
+
+        # Build message content
+        message_content = []
+
+        # Add file if provided
+        if file_data:
+            try:
+                # Validate file size
+                if isinstance(file_data, bytes):
+                    self._validate_file_size(file_data)
+                    encoded_data = self._encode_pdf_to_base64(file_data) if file_type == "pdf" else self._encode_image_to_base64(file_data)
+                else:
+                    # Assume it's already base64 encoded
+                    encoded_data = file_data
+
+                # Claude's native PDF/image support
+                media_type = "application/pdf" if file_type == "pdf" else "image/jpeg"
+                message_content.append({
+                    "type": "document" if file_type == "pdf" else "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": media_type,
+                        "data": encoded_data
+                    }
+                })
+                logger.info(f"Added {file_type} to Claude message")
+            except Exception as e:
+                logger.error(f"Failed to process file for Claude: {e}")
+                return f"Error processing file: {str(e)}"
+
+        # Add text message
+        message_content.append({"type": "text", "text": user_message})
 
         # Send message
         response = self.claude_client.messages.create(
@@ -177,7 +406,7 @@ When the user asks to modify content, use the appropriate tools. Always confirm 
             max_tokens=4096,
             system=system_message,
             tools=claude_tools,
-            messages=[{"role": "user", "content": user_message}]
+            messages=[{"role": "user", "content": message_content}]
         )
 
         # Handle tool calls

@@ -129,6 +129,10 @@ class MCPWebSocketClient {
 // Global WebSocket client instance
 let mcpClient = null;
 
+// File attachment state
+let attachedFile = null;
+let attachedFileName = null;
+
 /**
  * Initialize WebSocket connection and integrate with CMS
  * @param {Object} cmsInstance - Reference to TemplateEditorCMS instance
@@ -157,6 +161,9 @@ function initializeWebSocketChat(cmsInstance) {
 
     // Wire up send button to WebSocket
     setupSendButton(cmsInstance);
+
+    // Set up file upload handlers
+    setupFileUploadHandlers(cmsInstance);
 }
 
 /**
@@ -210,9 +217,29 @@ function updateConnectionStatus(status) {
  */
 function setupMessageHandlers(cmsInstance) {
     // Handle AI text responses
+    let voiceAnimationTimeout = null;
     mcpClient.on('ai_response', (message) => {
         console.log('🤖 AI response received:', message.content);
         cmsInstance.addChatMessage('ai', message.content);
+        
+        // Trigger voice animation when streaming response
+        if (window.animatedChatButton && window.animatedChatButton.showVoice) {
+            window.animatedChatButton.showVoice();
+        }
+        
+        // Clear any existing timeout
+        if (voiceAnimationTimeout) {
+            clearTimeout(voiceAnimationTimeout);
+        }
+        
+        // Return to idle after 2 seconds of no new messages (response complete)
+        voiceAnimationTimeout = setTimeout(() => {
+            if (window.animatedChatButton && 
+                window.animatedChatButton.currentState === 'voice' &&
+                window.animatedChatButton.showIdle) {
+                window.animatedChatButton.showIdle();
+            }
+        }, 2000);
     });
 
     // Handle tool execution start
@@ -220,6 +247,11 @@ function setupMessageHandlers(cmsInstance) {
         console.log('🔧 Tool execution started:', message.tool);
         const toolName = message.tool || 'action';
         cmsInstance.addChatMessage('ai', `🔧 Starting ${toolName}...`);
+        
+        // Trigger thinking animation
+        if (window.animatedChatButton && window.animatedChatButton.showThinking) {
+            window.animatedChatButton.showThinking();
+        }
     });
 
     // Handle tool execution completion
@@ -227,6 +259,17 @@ function setupMessageHandlers(cmsInstance) {
         console.log('✅ Tool execution completed:', message.tool);
         const toolName = message.tool || 'action';
         cmsInstance.addChatMessage('ai', `✓ Completed ${toolName}`);
+        
+        // If no ai_response is coming, return to idle after a short delay
+        // Otherwise, voice animation will handle the transition
+        setTimeout(() => {
+            // Only return to idle if we're still in thinking state (no voice response came)
+            if (window.animatedChatButton && 
+                window.animatedChatButton.currentState === 'thinking' &&
+                window.animatedChatButton.showIdle) {
+                window.animatedChatButton.showIdle();
+            }
+        }, 500);
     });
 
     // Handle UI refresh commands
@@ -279,22 +322,23 @@ function setupSendButton(cmsInstance) {
     // Override the sendChatMessage method to use WebSocket
     const originalSendChatMessage = cmsInstance.sendChatMessage.bind(cmsInstance);
 
-    cmsInstance.sendChatMessage = function() {
+    cmsInstance.sendChatMessage = async function() {
         // Get message from input
         const message = this.chatInput.value.trim();
-        if (!message) return;
+        if (!message && !attachedFile) return;
 
         // Add user message to chat UI (existing behavior)
-        this.addChatMessage('user', message);
+        const displayMessage = attachedFile ? `${message} [📎 ${attachedFileName}]` : message;
+        this.addChatMessage('user', displayMessage);
 
         // Clear input (existing behavior)
         this.chatInput.value = '';
         this.chatInput.style.height = 'auto';
 
-        // Send via WebSocket instead of placeholder
+        // Prepare message data
         const messageData = {
             type: 'chat_message',
-            content: message,
+            content: message || 'Process this file',
             context: {
                 node_id: this.selectedNode,
                 session_id: this.sessionId,
@@ -302,9 +346,174 @@ function setupSendButton(cmsInstance) {
             }
         };
 
+        // Include file if attached
+        if (attachedFile) {
+            try {
+                // Convert file to base64
+                const base64Data = await fileToBase64(attachedFile);
+                messageData.file = base64Data;
+                messageData.fileName = attachedFileName;
+                console.log('📎 Sending message with file:', attachedFileName);
+            } catch (error) {
+                console.error('Error encoding file:', error);
+                this.addChatMessage('ai', '❌ Error: Could not read file');
+                return;
+            }
+        }
+
+        // Send via WebSocket
         mcpClient.send(messageData);
         console.log('💬 Chat message sent via WebSocket:', messageData);
+
+        // Clear attachment after sending
+        clearAttachment();
     };
+}
+
+/**
+ * Set up file upload handlers (drag-drop, click, preview)
+ * @param {Object} cmsInstance - Reference to TemplateEditorCMS instance
+ */
+function setupFileUploadHandlers(cmsInstance) {
+    const chatInputWrapper = document.querySelector('.chat-input-wrapper');
+    const chatInput = document.getElementById('chat-input');
+    const attachFileBtn = document.getElementById('attach-file-btn');
+    const fileInput = document.getElementById('chat-file-input');
+    const removeFileBtn = document.getElementById('remove-file-btn');
+
+    // Drag-over handler
+    chatInputWrapper.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        chatInputWrapper.classList.add('drag-over');
+    });
+
+    // Drag-leave handler
+    chatInputWrapper.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        chatInputWrapper.classList.remove('drag-over');
+    });
+
+    // Drop handler
+    chatInputWrapper.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        chatInputWrapper.classList.remove('drag-over');
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileSelection(files[0]);
+        }
+    });
+
+    // Paperclip button click
+    attachFileBtn.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileSelection(e.target.files[0]);
+        }
+    });
+
+    // Remove file button click
+    removeFileBtn.addEventListener('click', () => {
+        clearAttachment();
+    });
+}
+
+/**
+ * Handle file selection (from drag-drop or click)
+ * @param {File} file - Selected file
+ */
+function handleFileSelection(file) {
+    // Validate file type
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+        alert('Please select a PDF or image file (JPEG, PNG, GIF, WebP)');
+        return;
+    }
+
+    // Validate file size (5MB limit)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+        alert('File size exceeds 5MB limit. Please choose a smaller file.');
+        return;
+    }
+
+    // Store file
+    attachedFile = file;
+    attachedFileName = file.name;
+
+    // Show preview badge
+    showFilePreview(file.name, file.type);
+
+    console.log('📎 File attached:', file.name, `(${(file.size / 1024).toFixed(1)}KB)`);
+}
+
+/**
+ * Show file preview badge
+ * @param {string} fileName - Name of the file
+ * @param {string} fileType - MIME type of the file
+ */
+function showFilePreview(fileName, fileType) {
+    const previewBadge = document.getElementById('file-preview-badge');
+    const fileNameSpan = document.getElementById('file-preview-name');
+    const fileIcon = previewBadge.querySelector('.file-icon');
+
+    // Set icon based on file type
+    if (fileType.startsWith('image/')) {
+        fileIcon.textContent = '🖼️';
+    } else if (fileType === 'application/pdf') {
+        fileIcon.textContent = '📄';
+    } else {
+        fileIcon.textContent = '📎';
+    }
+
+    // Set filename
+    fileNameSpan.textContent = fileName;
+
+    // Show badge
+    previewBadge.classList.remove('hidden');
+}
+
+/**
+ * Clear file attachment
+ */
+function clearAttachment() {
+    attachedFile = null;
+    attachedFileName = null;
+
+    // Hide preview badge
+    const previewBadge = document.getElementById('file-preview-badge');
+    previewBadge.classList.add('hidden');
+
+    // Clear file input
+    const fileInput = document.getElementById('chat-file-input');
+    fileInput.value = '';
+
+    console.log('📎 Attachment cleared');
+}
+
+/**
+ * Convert file to base64 string
+ * @param {File} file - File to convert
+ * @returns {Promise<string>} Base64 encoded file data
+ */
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            // Extract base64 data (remove data:mime;base64, prefix)
+            const base64 = reader.result.split(',')[1];
+            resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
 }
 
 // Export for global access

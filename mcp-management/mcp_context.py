@@ -44,8 +44,8 @@ class MCPContext:
 
     def set_screen(self, screen: str):
         """Set the current screen (content or visual)"""
-        if screen not in ["content", "visual"]:
-            raise ValueError(f"Invalid screen: {screen}. Must be 'content' or 'visual'")
+        if screen not in ["content", "visual", "editor"]:
+            raise ValueError(f"Invalid screen: {screen}. Must be 'content', 'visual', or 'editor'")
 
         old_screen = self.current_screen
         self.current_screen = screen
