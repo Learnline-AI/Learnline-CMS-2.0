@@ -377,7 +377,10 @@ class MCPTools:
         # Fetch current components
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{self.context.backend_url}/nodes/{node_id}/components")
-            current_components = response.json().get("components", [])
+            current_data = response.json()
+            current_components = current_data.get("components", [])
+            suggested_template = current_data.get("suggested_template", "text-heavy")
+            overall_confidence = current_data.get("overall_confidence", 0.85)
 
         # Build new component sequence
         next_order = len(current_components) + 1
@@ -387,19 +390,36 @@ class MCPTools:
             new_components.append({
                 "type": comp["type"],
                 "order": next_order,
-                "parameters": comp["parameters"]
+                "parameters": comp["parameters"],
+                "confidence": comp.get("confidence", 0.85)
             })
             next_order += 1
 
         # Combine with existing
         all_components = current_components + new_components
 
-        # Save all components in single transaction
+        # Save all components in single transaction with all required fields
         async with httpx.AsyncClient() as client:
-            await client.post(
+            save_response = await client.post(
                 f"{self.context.backend_url}/nodes/{node_id}/components",
-                json={"components": all_components}
+                json={
+                    "node_id": node_id,
+                    "components": all_components,
+                    "suggested_template": suggested_template,
+                    "overall_confidence": overall_confidence
+                }
             )
+
+            # Check response status
+            if save_response.status_code != 200:
+                logger.error(f"Failed to save components: {save_response.status_code} - {save_response.text}")
+                return {
+                    "content": [{
+                        "type": "text",
+                        "text": f"❌ Failed to save components: {save_response.status_code} - {save_response.text}"
+                    }],
+                    "isError": True
+                }
 
         self.context.log_action("batch_add_components", {
             "node_id": node_id,

@@ -192,6 +192,26 @@ class LLMBackend:
 
 {context}
 
+# PDF Processing Protocol (MANDATORY)
+
+When you receive a PDF file attached to a message:
+1. Analyze the PDF content carefully to identify educational components
+2. Extract components from the content based on their structure and purpose
+3. YOU MUST call the `batch_add_components` tool with:
+   - node_id: Use the current node_id from the context above
+   - components: Array of extracted components with proper types and parameters
+4. DO NOT just describe what you see in the PDF - you MUST save it using the batch_add_components tool
+5. After calling the tool, confirm the save with the component count and types
+
+Component extraction guidelines for PDFs:
+- Identify headings → use **heading** component
+- Find explanatory text → use **paragraph** component
+- Locate formal definitions → use **definition** component (term + definition)
+- Spot visual content (diagrams, charts, fractions) → use **hero-number** component
+- Extract step-by-step procedures → use **step-sequence** or **worked-example**
+- Find memory tricks or tips → use **memory-trick** or **callout-box**
+- Multiple images in a row → use **two-pictures**, **three-pictures**, or **four-pictures**
+
 # Available Educational Components
 
 {component_guide}

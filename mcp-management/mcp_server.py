@@ -7,7 +7,7 @@ import asyncio
 import json
 import logging
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -108,6 +108,11 @@ class MCPServer:
                 "result": result
             })
 
+            # Broadcast UI refresh signal based on tool type
+            refresh_message = self._determine_refresh_target(name, arguments)
+            if refresh_message:
+                await self.broadcast_change(refresh_message)
+
             return result
 
         @self.app.websocket("/mcp-sync")
@@ -166,9 +171,21 @@ class MCPServer:
             content = message.get('content', '')
             file_data = message.get('file')  # Base64 encoded file or None
             file_name = message.get('fileName', 'unknown')
-            session_id = self.context.session_id
 
-            logger.info(f"Processing chat message: {content[:50]}... (file: {file_name if file_data else 'none'})")
+            # CRITICAL FIX: Use context from the message payload, not stored context
+            # This ensures the LLM processes content for the correct node
+            message_context = message.get('context', {})
+            node_id = message_context.get('node_id')
+            session_id = message_context.get('session_id') or self.context.session_id
+
+            # Update stored context to match message context
+            if session_id:
+                self.context.set_session(session_id)
+            if node_id:
+                self.context.set_node(node_id)
+                logger.info(f"Context updated from message: node={node_id}, session={session_id}")
+
+            logger.info(f"Processing chat message: {content[:50]}... (file: {file_name if file_data else 'none'}, node: {node_id})")
 
             # Send "thinking" notification
             await websocket.send_text(json.dumps({
@@ -232,6 +249,40 @@ class MCPServer:
 
         # Remove disconnected clients
         self.websocket_clients -= disconnected
+
+    def _determine_refresh_target(self, tool_name: str, arguments: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Map tool execution to UI refresh targets
+
+        Returns:
+            Dict with refresh_ui message structure, or None if no refresh needed
+        """
+        # Component modification tools - refresh components panel
+        if tool_name in ["add_component", "edit_component", "delete_component", "batch_add_components"]:
+            node_id = arguments.get("node_id")
+            if node_id:
+                return {
+                    "type": "refresh_ui",
+                    "target": "components",
+                    "node_id": node_id
+                }
+
+        # Node creation tools - refresh node list
+        elif tool_name == "create_node":
+            return {
+                "type": "refresh_ui",
+                "target": "nodes"
+            }
+
+        # Relationship tools - refresh knowledge graph
+        elif tool_name == "create_relationship":
+            return {
+                "type": "refresh_ui",
+                "target": "relationships"
+            }
+
+        # No refresh needed for other tools
+        return None
 
     def run(self, host="0.0.0.0", port=8001):
         """Start the MCP server"""

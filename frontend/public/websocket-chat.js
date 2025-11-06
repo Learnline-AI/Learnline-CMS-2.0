@@ -278,13 +278,13 @@ function setupMessageHandlers(cmsInstance) {
 
         if (message.target === 'components' && message.node_id) {
             console.log('🔄 Refreshing components for node:', message.node_id);
-            cmsInstance.loadNodeComponents(message.node_id);
+            cmsInstance.loadNodeContent(message.node_id);
         } else if (message.target === 'nodes') {
             console.log('🔄 Refreshing node list');
             cmsInstance.loadSessionNodes();
         } else if (message.target === 'relationships') {
             console.log('🔄 Refreshing knowledge graph');
-            cmsInstance.loadRelationships();
+            cmsInstance.loadSessionRelationships();
         }
     });
 
@@ -305,11 +305,11 @@ function setupMessageHandlers(cmsInstance) {
 
         // Refresh appropriate UI based on tool type
         if (message.tool === 'add_component' && message.arguments?.node_id) {
-            cmsInstance.loadNodeComponents(message.arguments.node_id);
+            cmsInstance.loadNodeContent(message.arguments.node_id);
         } else if (message.tool === 'create_node') {
             cmsInstance.loadSessionNodes();
         } else if (message.tool === 'create_relationship') {
-            cmsInstance.loadRelationships();
+            cmsInstance.loadSessionRelationships();
         }
     });
 }
