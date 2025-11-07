@@ -24,3 +24,6 @@ jsonrpcclient>=4.0.0
 
 # Async support
 aiofiles>=24.1.0
+
+# Docker management (Week 2: Code Execution)
+docker>=7.0.0

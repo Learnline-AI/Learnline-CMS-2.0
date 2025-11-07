@@ -183,6 +183,162 @@ class LLMBackend:
                 return contents[0].get("text", "")
             return "No context available"
 
+    def _build_code_execution_guide(self) -> str:
+        """Build comprehensive code execution documentation for system prompt"""
+        return """
+
+## Code Execution Tool
+
+You have access to Python code execution for analyzing curriculum data at scale.
+Use `execute_code` when you need to query, analyze, or find patterns across the curriculum.
+
+### Available Helper Functions
+
+1. **get_nodes(session_id)** → List[Dict]
+   Returns all nodes in the session with properties: node_id, title, content_category, etc.
+
+2. **get_relationships(session_id)** → List[Dict]
+   Returns all relationships: from_node_id, to_node_id, relationship_type, explanation
+
+3. **get_node_content(node_id)** → Dict
+   Returns full node data including all educational components
+
+4. **analyze_graph(session_id)** → networkx.DiGraph
+   Returns NetworkX graph for path analysis, cycle detection, centrality calculations
+
+### Allowed Imports
+- **Data analysis**: pandas, numpy, networkx
+- **Math**: math, statistics, decimal, fractions
+- **Standard library**: collections, itertools, datetime, json, csv, re
+- **Custom**: code_helpers (contains the helper functions)
+
+### Working Examples
+
+**Example 1: Count nodes in curriculum**
+```python
+from code_helpers import get_nodes
+nodes = get_nodes(session_id)
+print(f"Total nodes: {len(nodes)}")
+result = len(nodes)
+```
+
+**Example 2: Find orphan nodes (no prerequisites)**
+```python
+from code_helpers import get_nodes, get_relationships
+nodes = get_nodes(session_id)
+rels = get_relationships(session_id)
+
+# Find nodes that are targets of PREREQUISITE relationships
+nodes_with_prereqs = set()
+for rel in rels:
+    if 'PREREQUISITE' in rel['relationship_type']:
+        nodes_with_prereqs.add(rel['to_node_id'])
+
+# Nodes not in that set are orphans
+orphans = [n for n in nodes if n['node_id'] not in nodes_with_prereqs]
+result = [n['node_id'] for n in orphans]
+```
+
+**Example 3: Find shortest path between nodes**
+```python
+from code_helpers import analyze_graph
+import networkx as nx
+
+G = analyze_graph(session_id)
+try:
+    path = nx.shortest_path(G, source='N001', target='N020')
+    print(f"Shortest path: {' → '.join(path)}")
+    result = path
+except nx.NetworkXNoPath:
+    result = "No path exists between these nodes"
+```
+
+**Example 4: Search for specific content**
+```python
+from code_helpers import get_nodes
+nodes = get_nodes(session_id)
+
+# Find nodes about fractions
+fraction_nodes = [n for n in nodes
+                 if 'fraction' in n.get('title', '').lower()]
+
+print(f"Found {len(fraction_nodes)} nodes about fractions")
+result = [{'id': n['node_id'], 'title': n['title']}
+          for n in fraction_nodes]
+```
+
+**Example 5: Statistical analysis with pandas**
+```python
+from code_helpers import get_nodes
+import pandas as pd
+
+nodes = get_nodes(session_id)
+df = pd.DataFrame(nodes)
+
+# Analyze node structure
+print(f"Total nodes: {len(df)}")
+print(f"Columns: {list(df.columns)}")
+
+# Example: Group by chapter if available
+if 'chapter_id' in df.columns:
+    chapter_counts = df.groupby('chapter_id').size().to_dict()
+    result = chapter_counts
+else:
+    result = {"total_nodes": len(df), "columns": list(df.columns)}
+```
+
+### When to Use Code Execution
+
+**USE execute_code for:**
+- ✅ "How many nodes are in my curriculum?" (counting/statistics)
+- ✅ "Which nodes have no prerequisites?" (pattern finding)
+- ✅ "Find all nodes about fractions" (searching/filtering)
+- ✅ "Shortest path from N001 to N020" (graph algorithms)
+- ✅ "What's the most common component type?" (aggregation)
+- ✅ "Show me the curriculum structure" (graph analysis)
+
+**DO NOT use execute_code for:**
+- ❌ "Add a heading to node N002" → Use **add_component**
+- ❌ "Edit this definition text" → Use **edit_component**
+- ❌ "Connect N001 to N002" → Use **create_relationship**
+- ❌ "Delete this worked example" → Use **delete_component**
+- ❌ Processing a PDF → Use **batch_add_components**
+
+### Important Notes
+- `session_id` is automatically available in your code (pre-injected)
+- Code runs in sandboxed Docker container (5-second timeout)
+- Execution is read-only (cannot modify database)
+- Always import helper functions: `from code_helpers import get_nodes`
+- Return final result with: `result = ...`
+- Use `print()` for intermediate debugging output
+
+### Defensive Coding Best Practices
+**ALWAYS use defensive coding to handle missing/null data:**
+
+```python
+# ❌ BAD - will crash if component_type is None
+comp_type = comp.get('component_type').upper()
+
+# ✅ GOOD - safely handles None values
+comp_type = comp.get('component_type')
+if comp_type:
+    comp_type = comp_type.upper()
+else:
+    comp_type = 'UNKNOWN'
+
+# ✅ BETTER - one-liner with default
+comp_type = (comp.get('component_type') or 'UNKNOWN').upper()
+```
+
+**Common fields that may be None:**
+- `component_type` in components
+- `title`, `content_category` in nodes
+- `relationship_type`, `explanation` in relationships
+- Any `parameters` dict values
+
+**Always use `.get()` with defaults and check for None before calling methods like `.upper()`, `.lower()`, `.split()`, etc.**
+"""
+
     def _build_system_message(self, context: str) -> str:
         """Build system message with context and component knowledge"""
         # Get component documentation from schemas
@@ -229,14 +385,19 @@ When analyzing educational content:
 
 # Available Tools
 
-You have access to tools to:
-- **batch_add_components**: Add multiple components at once (efficient for PDFs)
-- **add_component**: Add a single component
-- **edit_component**: Modify existing components
-- **delete_component**: Remove components (requires confirmation)
-- **create_relationship**: Link nodes in the curriculum graph
+## Content Management Tools
+- **batch_add_components**: Add multiple components at once (efficient for PDF processing)
+- **add_component**: Add a single educational component to a node
+- **edit_component**: Modify existing component content or parameters
+- **delete_component**: Remove components (requires confirmation from user)
+- **create_relationship**: Create curriculum graph connections (LEADS_TO, PREREQUISITE, ENRICHMENT)
 
-When the user asks to modify content, use the appropriate tools. Always confirm actions with clear feedback."""
+## Data Analysis Tools
+- **execute_code**: Execute Python code to analyze curriculum data (read-only, sandboxed)
+
+{self._build_code_execution_guide()}
+
+When the user asks to modify content, use content management tools. When asked about patterns, statistics, or analysis, use execute_code. Always confirm actions with clear feedback."""
 
     # ============ File Processing Utilities ============
 

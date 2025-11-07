@@ -8,6 +8,9 @@ import logging
 from typing import Dict, List, Any, Optional
 from mcp_context import MCPContext
 
+# Import code executor for Week 2 code execution feature
+from code_executor import CodeExecutor
+
 logger = logging.getLogger(__name__)
 
 # Valid component types from component_schemas.py
@@ -27,6 +30,8 @@ class MCPTools:
 
     def __init__(self, context: MCPContext):
         self.context = context
+        # Initialize code executor for Week 2 feature
+        self.code_executor = CodeExecutor()
 
     async def list_tools(self) -> Dict[str, Any]:
         """MCP protocol: List all available tools"""
@@ -133,6 +138,24 @@ class MCPTools:
                     },
                     "required": ["node_id", "components"]
                 }
+            },
+            {
+                "name": "execute_code",
+                "description": "Execute Python code for data analysis and curriculum exploration (read-only, sandboxed). Use this to analyze patterns, find relationships, or query large datasets without loading all data into context.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "code": {
+                            "type": "string",
+                            "description": "Python code to execute. Available helper functions: get_nodes(session_id), get_relationships(session_id), get_node_content(node_id), analyze_graph(session_id). Allowed imports: pandas, numpy, networkx, code_helpers, math, statistics, collections, datetime, json, csv, re."
+                        },
+                        "session_id": {
+                            "type": "string",
+                            "description": "Session ID for context (helper functions will use this)"
+                        }
+                    },
+                    "required": ["code", "session_id"]
+                }
             }
         ]
 
@@ -153,6 +176,8 @@ class MCPTools:
                 return await self._create_relationship(arguments)
             elif name == "batch_add_components":
                 return await self._batch_add_components(arguments)
+            elif name == "execute_code":
+                return await self.code_executor.execute_code(arguments)
             else:
                 return {"content": [{"type": "text", "text": f"Unknown tool: {name}"}], "isError": True}
         except Exception as e:

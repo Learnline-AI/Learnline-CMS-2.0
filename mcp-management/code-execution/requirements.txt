@@ -1,0 +1,12 @@
+# Python Dependencies for CMS Code Execution Environment
+# Week 1: Docker Environment + Helper Functions
+
+# HTTP client for calling FastAPI endpoints
+requests>=2.31.0
+
+# Data analysis and manipulation
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Graph analysis
+networkx>=3.1
