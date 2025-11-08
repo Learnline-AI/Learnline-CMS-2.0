@@ -1221,53 +1221,73 @@ class TemplateEditorCMS {
             case 'four-pictures':
                 div.innerHTML = `
                     <div class="component-header">
-                        <h4>Four Pictures</h4>
+                        <h4>Four SVGs</h4>
                         <button class="remove-component">×</button>
                     </div>
                     <div class="four-pictures-grid">
                         <div class="picture-slot" data-slot="1">
-                            <div class="image-upload-area">
-                                <div class="upload-zone" data-slot="1">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <p>Drop image here or click to upload</p>
-                                </div>
-                                <input type="file" class="image-input" accept="image/*" data-slot="1" style="display: none;">
+                            <div class="svg-display-controls">
+                                <button class="svg-toggle-btn active" data-mode="preview" data-slot="1">
+                                    <i class="fas fa-eye"></i> Preview
+                                </button>
+                                <button class="svg-toggle-btn" data-mode="code" data-slot="1">
+                                    <i class="fas fa-code"></i> Code
+                                </button>
                             </div>
-                            <div contenteditable="true" data-placeholder="Image title..." class="picture-title component-input" data-slot="1"></div>
-                            <div contenteditable="true" data-placeholder="Image description..." class="picture-body component-input component-textarea" data-slot="1"></div>
+                            <div class="svg-preview-container" data-slot="1">
+                                <p class="svg-placeholder">No SVG code yet</p>
+                            </div>
+                            <textarea class="svg-code-input component-input" data-slot="1" placeholder="Paste SVG code here...&#10;&#10;Example:&#10;&lt;svg viewBox='0 0 200 200'&gt;&#10;  &lt;circle cx='100' cy='100' r='80' fill='#667eea'/&gt;&#10;&lt;/svg&gt;" rows="6" style="display: none;"></textarea>
+                            <div contenteditable="true" data-placeholder="SVG title..." class="picture-title component-input" data-slot="1"></div>
+                            <div contenteditable="true" data-placeholder="SVG description..." class="picture-body component-input component-textarea" data-slot="1"></div>
                         </div>
                         <div class="picture-slot" data-slot="2">
-                            <div class="image-upload-area">
-                                <div class="upload-zone" data-slot="2">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <p>Drop image here or click to upload</p>
-                                </div>
-                                <input type="file" class="image-input" accept="image/*" data-slot="2" style="display: none;">
+                            <div class="svg-display-controls">
+                                <button class="svg-toggle-btn active" data-mode="preview" data-slot="2">
+                                    <i class="fas fa-eye"></i> Preview
+                                </button>
+                                <button class="svg-toggle-btn" data-mode="code" data-slot="2">
+                                    <i class="fas fa-code"></i> Code
+                                </button>
                             </div>
-                            <div contenteditable="true" data-placeholder="Image title..." class="picture-title component-input" data-slot="2"></div>
-                            <div contenteditable="true" data-placeholder="Image description..." class="picture-body component-input component-textarea" data-slot="2"></div>
+                            <div class="svg-preview-container" data-slot="2">
+                                <p class="svg-placeholder">No SVG code yet</p>
+                            </div>
+                            <textarea class="svg-code-input component-input" data-slot="2" placeholder="Paste SVG code here..." rows="6" style="display: none;"></textarea>
+                            <div contenteditable="true" data-placeholder="SVG title..." class="picture-title component-input" data-slot="2"></div>
+                            <div contenteditable="true" data-placeholder="SVG description..." class="picture-body component-input component-textarea" data-slot="2"></div>
                         </div>
                         <div class="picture-slot" data-slot="3">
-                            <div class="image-upload-area">
-                                <div class="upload-zone" data-slot="3">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <p>Drop image here or click to upload</p>
-                                </div>
-                                <input type="file" class="image-input" accept="image/*" data-slot="3" style="display: none;">
+                            <div class="svg-display-controls">
+                                <button class="svg-toggle-btn active" data-mode="preview" data-slot="3">
+                                    <i class="fas fa-eye"></i> Preview
+                                </button>
+                                <button class="svg-toggle-btn" data-mode="code" data-slot="3">
+                                    <i class="fas fa-code"></i> Code
+                                </button>
                             </div>
-                            <div contenteditable="true" data-placeholder="Image title..." class="picture-title component-input" data-slot="3"></div>
-                            <div contenteditable="true" data-placeholder="Image description..." class="picture-body component-input component-textarea" data-slot="3"></div>
+                            <div class="svg-preview-container" data-slot="3">
+                                <p class="svg-placeholder">No SVG code yet</p>
+                            </div>
+                            <textarea class="svg-code-input component-input" data-slot="3" placeholder="Paste SVG code here..." rows="6" style="display: none;"></textarea>
+                            <div contenteditable="true" data-placeholder="SVG title..." class="picture-title component-input" data-slot="3"></div>
+                            <div contenteditable="true" data-placeholder="SVG description..." class="picture-body component-input component-textarea" data-slot="3"></div>
                         </div>
                         <div class="picture-slot" data-slot="4">
-                            <div class="image-upload-area">
-                                <div class="upload-zone" data-slot="4">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <p>Drop image here or click to upload</p>
-                                </div>
-                                <input type="file" class="image-input" accept="image/*" data-slot="4" style="display: none;">
+                            <div class="svg-display-controls">
+                                <button class="svg-toggle-btn active" data-mode="preview" data-slot="4">
+                                    <i class="fas fa-eye"></i> Preview
+                                </button>
+                                <button class="svg-toggle-btn" data-mode="code" data-slot="4">
+                                    <i class="fas fa-code"></i> Code
+                                </button>
                             </div>
-                            <div contenteditable="true" data-placeholder="Image title..." class="picture-title component-input" data-slot="4"></div>
-                            <div contenteditable="true" data-placeholder="Image description..." class="picture-body component-input component-textarea" data-slot="4"></div>
+                            <div class="svg-preview-container" data-slot="4">
+                                <p class="svg-placeholder">No SVG code yet</p>
+                            </div>
+                            <textarea class="svg-code-input component-input" data-slot="4" placeholder="Paste SVG code here..." rows="6" style="display: none;"></textarea>
+                            <div contenteditable="true" data-placeholder="SVG title..." class="picture-title component-input" data-slot="4"></div>
+                            <div contenteditable="true" data-placeholder="SVG description..." class="picture-body component-input component-textarea" data-slot="4"></div>
                         </div>
                     </div>
                 `;
@@ -1275,42 +1295,57 @@ class TemplateEditorCMS {
             case 'three-pictures':
                 div.innerHTML = `
                     <div class="component-header">
-                        <h4>Three Pictures</h4>
+                        <h4>Three SVGs</h4>
                         <button class="remove-component">×</button>
                     </div>
                     <div class="three-pictures-grid">
                         <div class="picture-slot" data-slot="1">
-                            <div class="image-upload-area">
-                                <div class="upload-zone" data-slot="1">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <p>Drop image here or click to upload</p>
-                                </div>
-                                <input type="file" class="image-input" accept="image/*" data-slot="1" style="display: none;">
+                            <div class="svg-display-controls">
+                                <button class="svg-toggle-btn active" data-mode="preview" data-slot="1">
+                                    <i class="fas fa-eye"></i> Preview
+                                </button>
+                                <button class="svg-toggle-btn" data-mode="code" data-slot="1">
+                                    <i class="fas fa-code"></i> Code
+                                </button>
                             </div>
-                            <div contenteditable="true" data-placeholder="Image title..." class="picture-title component-input" data-slot="1"></div>
-                            <div contenteditable="true" data-placeholder="Image description..." class="picture-body component-input component-textarea" data-slot="1"></div>
+                            <div class="svg-preview-container" data-slot="1">
+                                <p class="svg-placeholder">No SVG code yet</p>
+                            </div>
+                            <textarea class="svg-code-input component-input" data-slot="1" placeholder="Paste SVG code here..." rows="6" style="display: none;"></textarea>
+                            <div contenteditable="true" data-placeholder="SVG title..." class="picture-title component-input" data-slot="1"></div>
+                            <div contenteditable="true" data-placeholder="SVG description..." class="picture-body component-input component-textarea" data-slot="1"></div>
                         </div>
                         <div class="picture-slot" data-slot="2">
-                            <div class="image-upload-area">
-                                <div class="upload-zone" data-slot="2">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <p>Drop image here or click to upload</p>
-                                </div>
-                                <input type="file" class="image-input" accept="image/*" data-slot="2" style="display: none;">
+                            <div class="svg-display-controls">
+                                <button class="svg-toggle-btn active" data-mode="preview" data-slot="2">
+                                    <i class="fas fa-eye"></i> Preview
+                                </button>
+                                <button class="svg-toggle-btn" data-mode="code" data-slot="2">
+                                    <i class="fas fa-code"></i> Code
+                                </button>
                             </div>
-                            <div contenteditable="true" data-placeholder="Image title..." class="picture-title component-input" data-slot="2"></div>
-                            <div contenteditable="true" data-placeholder="Image description..." class="picture-body component-input component-textarea" data-slot="2"></div>
+                            <div class="svg-preview-container" data-slot="2">
+                                <p class="svg-placeholder">No SVG code yet</p>
+                            </div>
+                            <textarea class="svg-code-input component-input" data-slot="2" placeholder="Paste SVG code here..." rows="6" style="display: none;"></textarea>
+                            <div contenteditable="true" data-placeholder="SVG title..." class="picture-title component-input" data-slot="2"></div>
+                            <div contenteditable="true" data-placeholder="SVG description..." class="picture-body component-input component-textarea" data-slot="2"></div>
                         </div>
                         <div class="picture-slot" data-slot="3">
-                            <div class="image-upload-area">
-                                <div class="upload-zone" data-slot="3">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <p>Drop image here or click to upload</p>
-                                </div>
-                                <input type="file" class="image-input" accept="image/*" data-slot="3" style="display: none;">
+                            <div class="svg-display-controls">
+                                <button class="svg-toggle-btn active" data-mode="preview" data-slot="3">
+                                    <i class="fas fa-eye"></i> Preview
+                                </button>
+                                <button class="svg-toggle-btn" data-mode="code" data-slot="3">
+                                    <i class="fas fa-code"></i> Code
+                                </button>
                             </div>
-                            <div contenteditable="true" data-placeholder="Image title..." class="picture-title component-input" data-slot="3"></div>
-                            <div contenteditable="true" data-placeholder="Image description..." class="picture-body component-input component-textarea" data-slot="3"></div>
+                            <div class="svg-preview-container" data-slot="3">
+                                <p class="svg-placeholder">No SVG code yet</p>
+                            </div>
+                            <textarea class="svg-code-input component-input" data-slot="3" placeholder="Paste SVG code here..." rows="6" style="display: none;"></textarea>
+                            <div contenteditable="true" data-placeholder="SVG title..." class="picture-title component-input" data-slot="3"></div>
+                            <div contenteditable="true" data-placeholder="SVG description..." class="picture-body component-input component-textarea" data-slot="3"></div>
                         </div>
                     </div>
                 `;
@@ -1399,31 +1434,41 @@ class TemplateEditorCMS {
             case 'two-pictures':
                 div.innerHTML = `
                     <div class="component-header">
-                        <h4>Two Pictures</h4>
+                        <h4>Two SVGs</h4>
                         <button class="remove-component">×</button>
                     </div>
                     <div class="two-pictures-grid">
                         <div class="picture-slot" data-slot="1">
-                            <div class="image-upload-area">
-                                <div class="upload-zone" data-slot="1">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <p>Drop image here or click to upload</p>
-                                </div>
-                                <input type="file" class="image-input" accept="image/*" data-slot="1" style="display: none;">
+                            <div class="svg-display-controls">
+                                <button class="svg-toggle-btn active" data-mode="preview" data-slot="1">
+                                    <i class="fas fa-eye"></i> Preview
+                                </button>
+                                <button class="svg-toggle-btn" data-mode="code" data-slot="1">
+                                    <i class="fas fa-code"></i> Code
+                                </button>
                             </div>
-                            <div contenteditable="true" data-placeholder="Image title..." class="picture-title component-input" data-slot="1"></div>
-                            <div contenteditable="true" data-placeholder="Image description..." class="picture-body component-input component-textarea" data-slot="1"></div>
+                            <div class="svg-preview-container" data-slot="1">
+                                <p class="svg-placeholder">No SVG code yet</p>
+                            </div>
+                            <textarea class="svg-code-input component-input" data-slot="1" placeholder="Paste SVG code here..." rows="6" style="display: none;"></textarea>
+                            <div contenteditable="true" data-placeholder="SVG title..." class="picture-title component-input" data-slot="1"></div>
+                            <div contenteditable="true" data-placeholder="SVG description..." class="picture-body component-input component-textarea" data-slot="1"></div>
                         </div>
                         <div class="picture-slot" data-slot="2">
-                            <div class="image-upload-area">
-                                <div class="upload-zone" data-slot="2">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <p>Drop image here or click to upload</p>
-                                </div>
-                                <input type="file" class="image-input" accept="image/*" data-slot="2" style="display: none;">
+                            <div class="svg-display-controls">
+                                <button class="svg-toggle-btn active" data-mode="preview" data-slot="2">
+                                    <i class="fas fa-eye"></i> Preview
+                                </button>
+                                <button class="svg-toggle-btn" data-mode="code" data-slot="2">
+                                    <i class="fas fa-code"></i> Code
+                                </button>
                             </div>
-                            <div contenteditable="true" data-placeholder="Image title..." class="picture-title component-input" data-slot="2"></div>
-                            <div contenteditable="true" data-placeholder="Image description..." class="picture-body component-input component-textarea" data-slot="2"></div>
+                            <div class="svg-preview-container" data-slot="2">
+                                <p class="svg-placeholder">No SVG code yet</p>
+                            </div>
+                            <textarea class="svg-code-input component-input" data-slot="2" placeholder="Paste SVG code here..." rows="6" style="display: none;"></textarea>
+                            <div contenteditable="true" data-placeholder="SVG title..." class="picture-title component-input" data-slot="2"></div>
+                            <div contenteditable="true" data-placeholder="SVG description..." class="picture-body component-input component-textarea" data-slot="2"></div>
                         </div>
                     </div>
                 `;
@@ -1644,7 +1689,33 @@ class TemplateEditorCMS {
         // Show question interface
         if (this.questionInterface) {
             this.questionInterface.style.display = 'flex';
+
+            // Load React Question Builder if not already loaded
+            if (!window.questionBuilderLoaded) {
+                this.loadQuestionBuilder();
+                window.questionBuilderLoaded = true;
+            }
+
+            // Update data attributes with current context
+            this.questionInterface.setAttribute('data-session-id', this.sessionId || '');
+            this.questionInterface.setAttribute('data-node-id', this.selectedNode || '');
         }
+    }
+
+    loadQuestionBuilder() {
+        // Load CSS
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = '/questions/frontend/build/assets/index-C_Yzc4Lx.css';
+        document.head.appendChild(link);
+
+        // Load JS module
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.src = '/questions/frontend/build/assets/index-Dc-sQLZk.js';
+        document.body.appendChild(script);
+
+        console.log('Question Builder loaded');
     }
 
     updateModeButtons() {
@@ -1878,15 +1949,31 @@ class TemplateEditorCMS {
             case 'three-pictures':
             case 'two-pictures':
                 if (data.pictures) {
-                    Object.keys(data.pictures).forEach(imageKey => {
-                        const imageData = data.pictures[imageKey];
-                        const slot = imageKey.replace('image', '');
+                    Object.keys(data.pictures).forEach(svgKey => {
+                        const svgData = data.pictures[svgKey];
+                        const slot = svgKey.replace('svg', '').replace('image', '');
 
                         const titleInput = componentElement.querySelector(`.picture-title[data-slot="${slot}"]`);
                         const bodyInput = componentElement.querySelector(`.picture-body[data-slot="${slot}"]`);
+                        const svgTextarea = componentElement.querySelector(`.svg-code-input[data-slot="${slot}"]`);
+                        const svgPreviewContainer = componentElement.querySelector(`.svg-preview-container[data-slot="${slot}"]`);
 
-                        if (titleInput && imageData.title) titleInput.innerHTML = imageData.title;
-                        if (bodyInput && imageData.body) bodyInput.innerHTML = imageData.body;
+                        if (titleInput && svgData.title) titleInput.innerHTML = svgData.title;
+                        if (bodyInput && svgData.body) bodyInput.innerHTML = svgData.body;
+
+                        // Populate SVG code and preview
+                        if (svgTextarea && svgData.svgCode) {
+                            svgTextarea.value = svgData.svgCode;
+
+                            // Also render the preview
+                            if (svgPreviewContainer) {
+                                if (svgData.svgCode.trim()) {
+                                    svgPreviewContainer.innerHTML = svgData.svgCode;
+                                } else {
+                                    svgPreviewContainer.innerHTML = '<p class="svg-placeholder">No SVG code yet</p>';
+                                }
+                            }
+                        }
                     });
                 }
                 break;
@@ -2045,132 +2132,146 @@ class TemplateEditorCMS {
     }
 
     setupFourPicturesEvents(component) {
-        const uploadZones = component.querySelectorAll('.upload-zone');
-        const imageInputs = component.querySelectorAll('.image-input');
+        const toggleButtons = component.querySelectorAll('.svg-toggle-btn');
+        const textareas = component.querySelectorAll('.svg-code-input');
 
-        uploadZones.forEach((zone, index) => {
-            const slot = zone.dataset.slot;
-            const fileInput = component.querySelector(`.image-input[data-slot="${slot}"]`);
+        // Setup toggle buttons for each slot
+        toggleButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const slot = btn.dataset.slot;
+                const mode = btn.dataset.mode;
 
-            // Click to upload
-            zone.addEventListener('click', () => {
-                fileInput.click();
+                this.toggleSVGViewMode(component, slot, mode);
             });
+        });
 
-            // Drag and drop events
-            zone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                zone.classList.add('drag-over');
-            });
+        // Setup textarea input listeners for live preview
+        textareas.forEach(textarea => {
+            textarea.addEventListener('input', () => {
+                const slot = textarea.dataset.slot;
+                const svgCode = textarea.value;
+                const previewContainer = component.querySelector(`.svg-preview-container[data-slot="${slot}"]`);
 
-            zone.addEventListener('dragleave', (e) => {
-                e.preventDefault();
-                zone.classList.remove('drag-over');
-            });
-
-            zone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                zone.classList.remove('drag-over');
-
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    this.handleImageUpload(files[0], slot, component);
+                if (previewContainer) {
+                    if (svgCode.trim()) {
+                        previewContainer.innerHTML = svgCode;
+                    } else {
+                        previewContainer.innerHTML = '<p class="svg-placeholder">No SVG code yet</p>';
+                    }
                 }
-            });
 
-            // File input change
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    this.handleImageUpload(e.target.files[0], slot, component);
-                }
+                this.updatePreview();
+                this.scheduleAutoSave();
             });
         });
     }
 
     setupThreePicturesEvents(component) {
-        const uploadZones = component.querySelectorAll('.upload-zone');
-        const imageInputs = component.querySelectorAll('.image-input');
+        const toggleButtons = component.querySelectorAll('.svg-toggle-btn');
+        const textareas = component.querySelectorAll('.svg-code-input');
 
-        uploadZones.forEach((zone, index) => {
-            const slot = zone.dataset.slot;
-            const fileInput = component.querySelector(`.image-input[data-slot="${slot}"]`);
+        // Setup toggle buttons for each slot
+        toggleButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const slot = btn.dataset.slot;
+                const mode = btn.dataset.mode;
 
-            // Click to upload
-            zone.addEventListener('click', () => {
-                fileInput.click();
+                this.toggleSVGViewMode(component, slot, mode);
             });
+        });
 
-            // Drag and drop events
-            zone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                zone.classList.add('drag-over');
-            });
+        // Setup textarea input listeners for live preview
+        textareas.forEach(textarea => {
+            textarea.addEventListener('input', () => {
+                const slot = textarea.dataset.slot;
+                const svgCode = textarea.value;
+                const previewContainer = component.querySelector(`.svg-preview-container[data-slot="${slot}"]`);
 
-            zone.addEventListener('dragleave', (e) => {
-                e.preventDefault();
-                zone.classList.remove('drag-over');
-            });
-
-            zone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                zone.classList.remove('drag-over');
-
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    this.handleImageUpload(files[0], slot, component);
+                if (previewContainer) {
+                    if (svgCode.trim()) {
+                        previewContainer.innerHTML = svgCode;
+                    } else {
+                        previewContainer.innerHTML = '<p class="svg-placeholder">No SVG code yet</p>';
+                    }
                 }
-            });
 
-            // File input change
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    this.handleImageUpload(e.target.files[0], slot, component);
-                }
+                this.updatePreview();
+                this.scheduleAutoSave();
             });
         });
     }
 
     setupTwoPicturesEvents(component) {
-        const uploadZones = component.querySelectorAll('.upload-zone');
-        const imageInputs = component.querySelectorAll('.image-input');
+        const toggleButtons = component.querySelectorAll('.svg-toggle-btn');
+        const textareas = component.querySelectorAll('.svg-code-input');
 
-        uploadZones.forEach((zone, index) => {
-            const slot = zone.dataset.slot;
-            const fileInput = component.querySelector(`.image-input[data-slot="${slot}"]`);
+        // Setup toggle buttons for each slot
+        toggleButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const slot = btn.dataset.slot;
+                const mode = btn.dataset.mode;
 
-            // Click to upload
-            zone.addEventListener('click', () => {
-                fileInput.click();
-            });
-
-            // Drag and drop events
-            zone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                zone.classList.add('drag-over');
-            });
-
-            zone.addEventListener('dragleave', (e) => {
-                e.preventDefault();
-                zone.classList.remove('drag-over');
-            });
-
-            zone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                zone.classList.remove('drag-over');
-
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    this.handleImageUpload(files[0], slot, component);
-                }
-            });
-
-            // File input change
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    this.handleImageUpload(e.target.files[0], slot, component);
-                }
+                this.toggleSVGViewMode(component, slot, mode);
             });
         });
+
+        // Setup textarea input listeners for live preview
+        textareas.forEach(textarea => {
+            textarea.addEventListener('input', () => {
+                const slot = textarea.dataset.slot;
+                const svgCode = textarea.value;
+                const previewContainer = component.querySelector(`.svg-preview-container[data-slot="${slot}"]`);
+
+                if (previewContainer) {
+                    if (svgCode.trim()) {
+                        previewContainer.innerHTML = svgCode;
+                    } else {
+                        previewContainer.innerHTML = '<p class="svg-placeholder">No SVG code yet</p>';
+                    }
+                }
+
+                this.updatePreview();
+                this.scheduleAutoSave();
+            });
+        });
+    }
+
+    toggleSVGViewMode(component, slot, mode) {
+        const previewContainer = component.querySelector(`.svg-preview-container[data-slot="${slot}"]`);
+        const codeTextarea = component.querySelector(`.svg-code-input[data-slot="${slot}"]`);
+        const previewBtn = component.querySelector(`.svg-toggle-btn[data-mode="preview"][data-slot="${slot}"]`);
+        const codeBtn = component.querySelector(`.svg-toggle-btn[data-mode="code"][data-slot="${slot}"]`);
+
+        if (!previewContainer || !codeTextarea || !previewBtn || !codeBtn) {
+            console.error('Toggle elements not found for slot:', slot);
+            return;
+        }
+
+        if (mode === 'preview') {
+            // Show preview, hide code
+            previewContainer.style.display = 'block';
+            codeTextarea.style.display = 'none';
+
+            // Update button states
+            previewBtn.classList.add('active');
+            codeBtn.classList.remove('active');
+
+            // Render SVG in preview if code exists
+            const svgCode = codeTextarea.value;
+            if (svgCode.trim()) {
+                previewContainer.innerHTML = svgCode;
+            } else {
+                previewContainer.innerHTML = '<p class="svg-placeholder">No SVG code yet</p>';
+            }
+        } else if (mode === 'code') {
+            // Show code, hide preview
+            previewContainer.style.display = 'none';
+            codeTextarea.style.display = 'block';
+
+            // Update button states
+            previewBtn.classList.remove('active');
+            codeBtn.classList.add('active');
+        }
     }
 
     setupHeroNumberEvents(component) {
@@ -2758,19 +2859,16 @@ class TemplateEditorCMS {
                 for (let i = 1; i <= 4; i++) {
                     const titleInput = component.querySelector(`.picture-title[data-slot="${i}"]`);
                     const bodyInput = component.querySelector(`.picture-body[data-slot="${i}"]`);
-                    const uploadZone = component.querySelector(`.upload-zone[data-slot="${i}"]`);
+                    const svgTextarea = component.querySelector(`.svg-code-input[data-slot="${i}"]`);
 
-                    const title = titleInput ? titleInput.innerHTML || `Image ${i} Title` : `Image ${i} Title`;
-                    const body = bodyInput ? bodyInput.innerHTML || `Image ${i} description` : `Image ${i} description`;
-                    const hasImage = uploadZone && uploadZone.dataset.imagePath;
+                    const title = titleInput ? titleInput.innerHTML || `SVG ${i} Title` : `SVG ${i} Title`;
+                    const body = bodyInput ? bodyInput.innerHTML || `SVG ${i} description` : `SVG ${i} description`;
+                    const svgCode = svgTextarea ? svgTextarea.value : '';
 
                     fourPicturesHTML += `
                         <div class="preview-picture-item">
-                            <div class="preview-image-placeholder ${hasImage ? 'has-image' : ''}">
-                                ${hasImage ?
-                                    `<img src="http://localhost:8001${uploadZone.dataset.imageUrl}" alt="${title}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--border-radius-small);">` :
-                                    '<i class="fas fa-image"></i>'
-                                }
+                            <div class="preview-svg-container">
+                                ${svgCode.trim() ? svgCode : '<p class="svg-placeholder">No SVG code</p>'}
                             </div>
                             <h4 class="preview-picture-title">${this.formatTextForPreview(title)}</h4>
                             <p class="preview-picture-body">${this.formatTextForPreview(body)}</p>
@@ -2785,19 +2883,16 @@ class TemplateEditorCMS {
                 for (let i = 1; i <= 3; i++) {
                     const titleInput = component.querySelector(`.picture-title[data-slot="${i}"]`);
                     const bodyInput = component.querySelector(`.picture-body[data-slot="${i}"]`);
-                    const uploadZone = component.querySelector(`.upload-zone[data-slot="${i}"]`);
+                    const svgTextarea = component.querySelector(`.svg-code-input[data-slot="${i}"]`);
 
-                    const title = titleInput ? titleInput.innerHTML || `Image ${i} Title` : `Image ${i} Title`;
-                    const body = bodyInput ? bodyInput.innerHTML || `Image ${i} description` : `Image ${i} description`;
-                    const hasImage = uploadZone && uploadZone.dataset.imagePath;
+                    const title = titleInput ? titleInput.innerHTML || `SVG ${i} Title` : `SVG ${i} Title`;
+                    const body = bodyInput ? bodyInput.innerHTML || `SVG ${i} description` : `SVG ${i} description`;
+                    const svgCode = svgTextarea ? svgTextarea.value : '';
 
                     threePicturesHTML += `
                         <div class="preview-picture-item">
-                            <div class="preview-image-placeholder ${hasImage ? 'has-image' : ''}">
-                                ${hasImage ?
-                                    `<img src="http://localhost:8001${uploadZone.dataset.imageUrl}" alt="${title}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--border-radius-small);">` :
-                                    '<i class="fas fa-image"></i>'
-                                }
+                            <div class="preview-svg-container">
+                                ${svgCode.trim() ? svgCode : '<p class="svg-placeholder">No SVG code</p>'}
                             </div>
                             <h4 class="preview-picture-title">${this.formatTextForPreview(title)}</h4>
                             <p class="preview-picture-body">${this.formatTextForPreview(body)}</p>
@@ -2836,19 +2931,16 @@ class TemplateEditorCMS {
                 for (let i = 1; i <= 2; i++) {
                     const titleInput = component.querySelector(`.picture-title[data-slot="${i}"]`);
                     const bodyInput = component.querySelector(`.picture-body[data-slot="${i}"]`);
-                    const uploadZone = component.querySelector(`.upload-zone[data-slot="${i}"]`);
+                    const svgTextarea = component.querySelector(`.svg-code-input[data-slot="${i}"]`);
 
-                    const title = titleInput ? titleInput.innerHTML || `Image ${i} Title` : `Image ${i} Title`;
-                    const body = bodyInput ? bodyInput.innerHTML || `Image ${i} description` : `Image ${i} description`;
-                    const hasImage = uploadZone && uploadZone.dataset.imagePath;
+                    const title = titleInput ? titleInput.innerHTML || `SVG ${i} Title` : `SVG ${i} Title`;
+                    const body = bodyInput ? bodyInput.innerHTML || `SVG ${i} description` : `SVG ${i} description`;
+                    const svgCode = svgTextarea ? svgTextarea.value : '';
 
                     twoPicturesHTML += `
                         <div class="preview-picture-item">
-                            <div class="preview-image-placeholder ${hasImage ? 'has-image' : ''}">
-                                ${hasImage ?
-                                    `<img src="http://localhost:8001${uploadZone.dataset.imageUrl}" alt="${title}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--border-radius-small);">` :
-                                    '<i class="fas fa-image"></i>'
-                                }
+                            <div class="preview-svg-container">
+                                ${svgCode.trim() ? svgCode : '<p class="svg-placeholder">No SVG code</p>'}
                             </div>
                             <h4 class="preview-picture-title">${this.formatTextForPreview(title)}</h4>
                             <p class="preview-picture-body">${this.formatTextForPreview(body)}</p>
@@ -3145,13 +3237,12 @@ class TemplateEditorCMS {
                 for (let i = 1; i <= 4; i++) {
                     const titleInput = component.querySelector(`.picture-title[data-slot="${i}"]`);
                     const bodyInput = component.querySelector(`.picture-body[data-slot="${i}"]`);
-                    const uploadZone = component.querySelector(`.upload-zone[data-slot="${i}"]`);
+                    const svgTextarea = component.querySelector(`.svg-code-input[data-slot="${i}"]`);
 
-                    data.pictures[`image${i}`] = {
+                    data.pictures[`svg${i}`] = {
                         title: titleInput ? titleInput.innerHTML : '',
                         body: bodyInput ? bodyInput.innerHTML : '',
-                        imagePath: uploadZone ? uploadZone.dataset.imagePath : '',
-                        imageUrl: uploadZone ? uploadZone.dataset.imageUrl : ''
+                        svgCode: svgTextarea ? svgTextarea.value : ''
                     };
                 }
                 break;
@@ -3160,13 +3251,12 @@ class TemplateEditorCMS {
                 for (let i = 1; i <= 3; i++) {
                     const titleInput = component.querySelector(`.picture-title[data-slot="${i}"]`);
                     const bodyInput = component.querySelector(`.picture-body[data-slot="${i}"]`);
-                    const uploadZone = component.querySelector(`.upload-zone[data-slot="${i}"]`);
+                    const svgTextarea = component.querySelector(`.svg-code-input[data-slot="${i}"]`);
 
-                    data.pictures[`image${i}`] = {
+                    data.pictures[`svg${i}`] = {
                         title: titleInput ? titleInput.innerHTML : '',
                         body: bodyInput ? bodyInput.innerHTML : '',
-                        imagePath: uploadZone ? uploadZone.dataset.imagePath : '',
-                        imageUrl: uploadZone ? uploadZone.dataset.imageUrl : ''
+                        svgCode: svgTextarea ? svgTextarea.value : ''
                     };
                 }
                 break;
@@ -3186,13 +3276,12 @@ class TemplateEditorCMS {
                 for (let i = 1; i <= 2; i++) {
                     const titleInput = component.querySelector(`.picture-title[data-slot="${i}"]`);
                     const bodyInput = component.querySelector(`.picture-body[data-slot="${i}"]`);
-                    const uploadZone = component.querySelector(`.upload-zone[data-slot="${i}"]`);
+                    const svgTextarea = component.querySelector(`.svg-code-input[data-slot="${i}"]`);
 
-                    data.pictures[`image${i}`] = {
+                    data.pictures[`svg${i}`] = {
                         title: titleInput ? titleInput.innerHTML : '',
                         body: bodyInput ? bodyInput.innerHTML : '',
-                        imagePath: uploadZone ? uploadZone.dataset.imagePath : '',
-                        imageUrl: uploadZone ? uploadZone.dataset.imageUrl : ''
+                        svgCode: svgTextarea ? svgTextarea.value : ''
                     };
                 }
                 break;

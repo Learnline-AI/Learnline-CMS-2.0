@@ -121,17 +121,17 @@ COMPONENT_SCHEMAS = {
     },
 
     "four-pictures": {
-        "description": "4 image slots with title/description each",
+        "description": "4 SVG slots with title/description each - paste SVG code directly",
         "parameters": {
             "pictures": {
                 "type": "object",
                 "required": True,
-                "description": "Object with image1, image2, image3, image4 properties",
+                "description": "Object with svg1, svg2, svg3, svg4 properties",
                 "structure": {
-                    "image1": {"title": "string", "body": "string", "imagePath": "string (optional)", "imageUrl": "string (optional)"},
-                    "image2": {"title": "string", "body": "string", "imagePath": "string (optional)", "imageUrl": "string (optional)"},
-                    "image3": {"title": "string", "body": "string", "imagePath": "string (optional)", "imageUrl": "string (optional)"},
-                    "image4": {"title": "string", "body": "string", "imagePath": "string (optional)", "imageUrl": "string (optional)"}
+                    "svg1": {"title": "string", "body": "string", "svgCode": "string (SVG markup)"},
+                    "svg2": {"title": "string", "body": "string", "svgCode": "string (SVG markup)"},
+                    "svg3": {"title": "string", "body": "string", "svgCode": "string (SVG markup)"},
+                    "svg4": {"title": "string", "body": "string", "svgCode": "string (SVG markup)"}
                 }
             }
         },
@@ -139,26 +139,26 @@ COMPONENT_SCHEMAS = {
             "type": "four-pictures",
             "parameters": {
                 "pictures": {
-                    "image1": {"title": "Pizza Slices", "body": "3 out of 4 slices eaten", "imagePath": "", "imageUrl": ""},
-                    "image2": {"title": "Pie Chart", "body": "Visual fraction representation", "imagePath": "", "imageUrl": ""},
-                    "image3": {"title": "Number Line", "body": "Fractions on a number line", "imagePath": "", "imageUrl": ""},
-                    "image4": {"title": "Real Objects", "body": "Everyday fraction examples", "imagePath": "", "imageUrl": ""}
+                    "svg1": {"title": "Pizza Slices", "body": "3 out of 4 slices eaten", "svgCode": "<svg viewBox='0 0 200 200'><circle cx='100' cy='100' r='80' fill='#FFD700'/><path d='M100,100 L180,100 A80,80 0 0,1 100,180 Z' fill='#FF6B6B'/></svg>"},
+                    "svg2": {"title": "Pie Chart", "body": "Visual fraction representation", "svgCode": "<svg viewBox='0 0 200 200'><circle cx='100' cy='100' r='80' fill='none' stroke='#667eea' stroke-width='40'/></svg>"},
+                    "svg3": {"title": "Number Line", "body": "Fractions on a number line", "svgCode": "<svg viewBox='0 0 200 200'><line x1='20' y1='100' x2='180' y2='100' stroke='#333' stroke-width='2'/></svg>"},
+                    "svg4": {"title": "Real Objects", "body": "Everyday fraction examples", "svgCode": "<svg viewBox='0 0 200 200'><rect x='50' y='50' width='100' height='100' fill='#51CF66'/></svg>"}
                 }
             }
         }
     },
 
     "three-pictures": {
-        "description": "3 image slots with title/description each",
+        "description": "3 SVG slots with title/description each - paste SVG code directly",
         "parameters": {
             "pictures": {
                 "type": "object",
                 "required": True,
-                "description": "Object with image1, image2, image3 properties",
+                "description": "Object with svg1, svg2, svg3 properties",
                 "structure": {
-                    "image1": {"title": "string", "body": "string", "imagePath": "string (optional)", "imageUrl": "string (optional)"},
-                    "image2": {"title": "string", "body": "string", "imagePath": "string (optional)", "imageUrl": "string (optional)"},
-                    "image3": {"title": "string", "body": "string", "imagePath": "string (optional)", "imageUrl": "string (optional)"}
+                    "svg1": {"title": "string", "body": "string", "svgCode": "string (SVG markup)"},
+                    "svg2": {"title": "string", "body": "string", "svgCode": "string (SVG markup)"},
+                    "svg3": {"title": "string", "body": "string", "svgCode": "string (SVG markup)"}
                 }
             }
         },
@@ -166,24 +166,24 @@ COMPONENT_SCHEMAS = {
             "type": "three-pictures",
             "parameters": {
                 "pictures": {
-                    "image1": {"title": "Example 1", "body": "First visual example", "imagePath": "", "imageUrl": ""},
-                    "image2": {"title": "Example 2", "body": "Second visual example", "imagePath": "", "imageUrl": ""},
-                    "image3": {"title": "Example 3", "body": "Third visual example", "imagePath": "", "imageUrl": ""}
+                    "svg1": {"title": "Example 1", "body": "First visual example", "svgCode": "<svg viewBox='0 0 200 200'><circle cx='100' cy='100' r='80' fill='#3b82f6'/></svg>"},
+                    "svg2": {"title": "Example 2", "body": "Second visual example", "svgCode": "<svg viewBox='0 0 200 200'><rect x='50' y='50' width='100' height='100' fill='#8b5cf6'/></svg>"},
+                    "svg3": {"title": "Example 3", "body": "Third visual example", "svgCode": "<svg viewBox='0 0 200 200'><polygon points='100,20 180,180 20,180' fill='#10b981'/></svg>"}
                 }
             }
         }
     },
 
     "two-pictures": {
-        "description": "2 image slots with title/description each",
+        "description": "2 SVG slots with title/description each - paste SVG code directly",
         "parameters": {
             "pictures": {
                 "type": "object",
                 "required": True,
-                "description": "Object with image1, image2 properties",
+                "description": "Object with svg1, svg2 properties",
                 "structure": {
-                    "image1": {"title": "string", "body": "string", "imagePath": "string (optional)", "imageUrl": "string (optional)"},
-                    "image2": {"title": "string", "body": "string", "imagePath": "string (optional)", "imageUrl": "string (optional)"}
+                    "svg1": {"title": "string", "body": "string", "svgCode": "string (SVG markup)"},
+                    "svg2": {"title": "string", "body": "string", "svgCode": "string (SVG markup)"}
                 }
             }
         },
@@ -191,8 +191,8 @@ COMPONENT_SCHEMAS = {
             "type": "two-pictures",
             "parameters": {
                 "pictures": {
-                    "image1": {"title": "Before", "body": "Situation before applying concept", "imagePath": "", "imageUrl": ""},
-                    "image2": {"title": "After", "body": "Situation after applying concept", "imagePath": "", "imageUrl": ""}
+                    "svg1": {"title": "Before", "body": "Situation before applying concept", "svgCode": "<svg viewBox='0 0 200 200'><circle cx='100' cy='100' r='60' fill='#ef4444' opacity='0.5'/></svg>"},
+                    "svg2": {"title": "After", "body": "Situation after applying concept", "svgCode": "<svg viewBox='0 0 200 200'><circle cx='100' cy='100' r='60' fill='#22c55e'/></svg>"}
                 }
             }
         }

@@ -226,25 +226,24 @@ class StudentView {
         let picturesHTML = '';
 
         for (let i = 1; i <= count; i++) {
+            // Support both old image keys and new svg keys
+            const svgKey = `svg${i}`;
             const imageKey = `image${i}`;
-            const imageData = pictures[imageKey] || {};
+            const svgData = pictures[svgKey] || pictures[imageKey] || {};
 
-            const title = imageData.title || `Image ${i}`;
-            const body = imageData.body || '';
-            let imageUrl = imageData.imageUrl || imageData.imagePath || '';
+            const title = svgData.title || `SVG ${i}`;
+            const body = svgData.body || '';
+            const svgCode = svgData.svgCode || '';
 
-            // Prepend API base URL if image URL is a relative path
-            if (imageUrl && !imageUrl.startsWith('http')) {
-                imageUrl = `${this.apiBaseUrl}${imageUrl}`;
-            }
-
-            const imageHTML = imageUrl
-                ? `<img src="${imageUrl}" alt="${title}" class="student-picture-image">`
+            const svgHTML = svgCode.trim()
+                ? svgCode
                 : `<div class="student-picture-image-placeholder"><i class="fas fa-image"></i></div>`;
 
             picturesHTML += `
                 <div class="student-picture-item">
-                    ${imageHTML}
+                    <div class="student-svg-container">
+                        ${svgHTML}
+                    </div>
                     <h3 class="student-picture-title">${title}</h3>
                     ${body ? `<p class="student-picture-body">${body}</p>` : ''}
                 </div>

@@ -133,20 +133,20 @@
                                     <span>Hero Number</span>
                                 </div>
                                 <div class="component-item" draggable="true" data-component-type="four-pictures">
-                                    <i class="fas fa-images"></i>
-                                    <span>Four Pictures</span>
+                                    <i class="fas fa-code"></i>
+                                    <span>Four SVGs</span>
                                 </div>
                                 <div class="component-item" draggable="true" data-component-type="three-pictures">
-                                    <i class="fas fa-image"></i>
-                                    <span>Three Pictures</span>
+                                    <i class="fas fa-code"></i>
+                                    <span>Three SVGs (Editable)</span>
                                 </div>
                                 <div class="component-item" draggable="true" data-component-type="three-svgs">
                                     <i class="fas fa-shapes"></i>
-                                    <span>Three SVGs</span>
+                                    <span>Three SVGs (AI Generated)</span>
                                 </div>
                                 <div class="component-item" draggable="true" data-component-type="two-pictures">
-                                    <i class="fas fa-images"></i>
-                                    <span>Two Pictures</span>
+                                    <i class="fas fa-code"></i>
+                                    <span>Two SVGs</span>
                                 </div>
                             </div>
                         </div>
@@ -164,10 +164,10 @@
                         <button id="api-add-memory-trick" onclick="insertComponent('memory-trick')">Add Memory Trick</button>
                         <button id="api-add-callout-box" onclick="insertComponent('callout-box')">Add Callout Box</button>
                         <button id="api-add-hero-number" onclick="insertComponent('hero-number')">Add Hero Number</button>
-                        <button id="api-add-four-pictures" onclick="insertComponent('four-pictures')">Add Four Pictures</button>
-                        <button id="api-add-three-pictures" onclick="insertComponent('three-pictures')">Add Three Pictures</button>
-                        <button id="api-add-three-svgs" onclick="insertComponent('three-svgs')">Add Three SVGs</button>
-                        <button id="api-add-two-pictures" onclick="insertComponent('two-pictures')">Add Two Pictures</button>
+                        <button id="api-add-four-pictures" onclick="insertComponent('four-pictures')">Add Four SVGs</button>
+                        <button id="api-add-three-pictures" onclick="insertComponent('three-pictures')">Add Three SVGs</button>
+                        <button id="api-add-three-svgs" onclick="insertComponent('three-svgs')">Add Three SVGs (AI)</button>
+                        <button id="api-add-two-pictures" onclick="insertComponent('two-pictures')">Add Two SVGs</button>
 
                         <!-- Node Management Buttons -->
                         <button id="api-delete-node" onclick="deleteCurrentNode()">Delete Node</button>
@@ -387,14 +387,11 @@
                     </div>
 
                     <!-- Question Mode Interface -->
-                    <div class="question-mode-interface" id="question-mode-interface" style="display: none;">
-                        <div class="question-interface-content">
-                            <div class="question-placeholder">
-                                <i class="fas fa-question-circle"></i>
-                                <h3>Question Builder</h3>
-                                <p>Question creation interface coming soon...</p>
-                            </div>
-                        </div>
+                    <div class="question-mode-interface" id="question-mode-interface"
+                         style="display: none;"
+                         data-session-id=""
+                         data-node-id="">
+                        <!-- React Question Builder mounts here -->
                     </div>
                 </div>
             </section>

@@ -3335,6 +3335,112 @@ body {
     color: var(--text-tertiary);
 }
 
+/* SVG Component Styles */
+
+/* SVG Display Controls (Toggle Buttons) */
+.svg-display-controls {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.svg-toggle-btn {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid var(--accent-gray);
+    border-radius: var(--border-radius-small);
+    background: var(--white);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.svg-toggle-btn:hover {
+    background: rgba(0, 122, 255, 0.05);
+    border-color: var(--primary-blue);
+}
+
+.svg-toggle-btn.active {
+    background: var(--primary-blue);
+    color: var(--white);
+    border-color: var(--primary-blue);
+}
+
+.svg-toggle-btn i {
+    font-size: 0.875rem;
+}
+
+/* SVG Preview Container */
+.svg-preview-container {
+    border: 2px solid var(--accent-gray);
+    border-radius: var(--border-radius-small);
+    padding: 1rem;
+    background: var(--white);
+    min-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+}
+
+.svg-preview-container svg {
+    max-width: 100%;
+    max-height: 200px;
+    height: auto;
+}
+
+.svg-placeholder {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    text-align: center;
+    margin: 0;
+}
+
+/* SVG Code Input (Textarea) */
+.svg-code-input {
+    width: 100%;
+    min-height: 150px;
+    padding: 0.75rem;
+    border: 1px solid var(--accent-gray);
+    border-radius: var(--border-radius-small);
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    resize: vertical;
+    margin-bottom: 0.75rem;
+    background: var(--background-gray);
+}
+
+.svg-code-input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+}
+
+/* SVG Container for Student View */
+.student-svg-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: var(--background-gray);
+    border-radius: var(--border-radius-small);
+    min-height: 150px;
+    margin-bottom: 0.75rem;
+}
+
+.student-svg-container svg {
+    max-width: 100%;
+    max-height: 250px;
+    height: auto;
+}
+
 /* Picture Title and Body Inputs */
 .picture-title {
     width: 100%;
