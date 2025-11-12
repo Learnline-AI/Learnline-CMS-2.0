@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI-Powered Educational CMS</title>
     <link rel="stylesheet" href="styles.css">
+
+    <!-- Component Shared Styles -->
+    <link rel="stylesheet" href="components/_shared/shared.css">
+    <link rel="stylesheet" href="components/_shared/picture-shared.css">
+
+    <!-- Individual Component Styles -->
+    <link rel="stylesheet" href="components/heading/heading.css">
+    <link rel="stylesheet" href="components/paragraph/paragraph.css">
+    <link rel="stylesheet" href="components/memory-trick/memory-trick.css">
+    <link rel="stylesheet" href="components/definition/definition.css">
+    <link rel="stylesheet" href="components/worked-example/worked-example.css">
+    <link rel="stylesheet" href="components/callout-box/callout-box.css">
+    <link rel="stylesheet" href="components/step-sequence/step-sequence.css">
+    <link rel="stylesheet" href="components/two-pictures/two-pictures.css">
+    <link rel="stylesheet" href="components/three-pictures/three-pictures.css">
+    <link rel="stylesheet" href="components/four-pictures/four-pictures.css">
+
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -128,10 +145,6 @@
                                     <i class="fas fa-exclamation-circle"></i>
                                     <span>Callout Box</span>
                                 </div>
-                                <div class="component-item" draggable="true" data-component-type="hero-number">
-                                    <i class="fas fa-chart-line"></i>
-                                    <span>Hero Number</span>
-                                </div>
                                 <div class="component-item" draggable="true" data-component-type="four-pictures">
                                     <i class="fas fa-code"></i>
                                     <span>Four SVGs</span>
@@ -139,10 +152,6 @@
                                 <div class="component-item" draggable="true" data-component-type="three-pictures">
                                     <i class="fas fa-code"></i>
                                     <span>Three SVGs (Editable)</span>
-                                </div>
-                                <div class="component-item" draggable="true" data-component-type="three-svgs">
-                                    <i class="fas fa-shapes"></i>
-                                    <span>Three SVGs (AI Generated)</span>
                                 </div>
                                 <div class="component-item" draggable="true" data-component-type="two-pictures">
                                     <i class="fas fa-code"></i>
@@ -163,10 +172,8 @@
                         <button id="api-add-worked-example" onclick="insertComponent('worked-example')">Add Worked Example</button>
                         <button id="api-add-memory-trick" onclick="insertComponent('memory-trick')">Add Memory Trick</button>
                         <button id="api-add-callout-box" onclick="insertComponent('callout-box')">Add Callout Box</button>
-                        <button id="api-add-hero-number" onclick="insertComponent('hero-number')">Add Hero Number</button>
                         <button id="api-add-four-pictures" onclick="insertComponent('four-pictures')">Add Four SVGs</button>
                         <button id="api-add-three-pictures" onclick="insertComponent('three-pictures')">Add Three SVGs</button>
-                        <button id="api-add-three-svgs" onclick="insertComponent('three-svgs')">Add Three SVGs (AI)</button>
                         <button id="api-add-two-pictures" onclick="insertComponent('two-pictures')">Add Two SVGs</button>
 
                         <!-- Node Management Buttons -->
@@ -457,6 +464,36 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
     <script src="animated-chat-button.js"></script>
     <script src="websocket-chat.js"></script>
+
+    <!-- CMS Utility Functions (must load before app.js) -->
+    <script src="utils/text-utils.js"></script>
+    <script src="utils/svg-generators.js"></script>
+
+    <!-- Component System (must load before app.js) -->
+    <script src="components/_base/BaseComponent.js"></script>
+    <script src="components/heading/HeadingComponent.js"></script>
+    <script src="components/paragraph/ParagraphComponent.js"></script>
+    <script src="components/memory-trick/MemoryTrickComponent.js"></script>
+    <script src="components/definition/DefinitionComponent.js"></script>
+    <script src="components/worked-example/WorkedExampleComponent.js"></script>
+    <script src="components/callout-box/CalloutBoxComponent.js"></script>
+    <script src="components/step-sequence/StepSequenceComponent.js"></script>
+    <script src="components/two-pictures/TwoPicturesComponent.js"></script>
+    <script src="components/three-pictures/ThreePicturesComponent.js"></script>
+    <script src="components/four-pictures/FourPicturesComponent.js"></script>
+    <script src="components/registry.js"></script>
+
+    <!-- Utilities -->
+    <script src="utils/CSVParser.js"></script>
+
+    <!-- Managers -->
+    <script src="managers/StateManager.js"></script>
+    <script src="managers/ComponentManager.js"></script>
+    <script src="managers/PreviewManager.js"></script>
+    <script src="managers/AutoSaveManager.js"></script>
+    <script src="managers/UploadManager.js"></script>
+
+    <!-- Main Application JS -->
     <script src="app.js"></script>
 </body>
 </html>
