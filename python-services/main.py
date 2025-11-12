@@ -1,3 +1,9 @@
+import sys
+import os
+
+# Add parent directory to path for questions module
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -5,7 +11,6 @@ from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, Dict, List, Any
-import os
 import logging
 import json
 import asyncio
@@ -38,6 +43,13 @@ try:
 except ImportError:
     VISION_PROCESSOR_AVAILABLE = False
     print("Warning: Vision processor not available due to missing dependencies")
+
+try:
+    from questions.backend.api import router as question_router, set_db_manager
+    QUESTIONS_AVAILABLE = True
+except ImportError:
+    QUESTIONS_AVAILABLE = False
+    print("Warning: Questions module not available due to missing dependencies")
 
 load_dotenv()
 
@@ -109,10 +121,27 @@ app.mount("/uploads", StaticFiles(directory="../uploads"), name="uploads")
 app.mount("/cms", StaticFiles(directory="../frontend/public"), name="cms")
 app.mount("/templates", StaticFiles(directory="../templates"), name="templates")
 
+# Mount React Question Builder bundle
+app.mount("/questions/frontend/build", StaticFiles(directory="../questions/frontend/build"), name="question-builder")
+
 pdf_processor = PDFProcessor() if PDF_PROCESSOR_AVAILABLE else None
 db_manager = DatabaseManager() if DATABASE_AVAILABLE else None
 template_renderer = TemplateRenderer() if TEMPLATE_RENDERER_AVAILABLE else None
-vision_processor = VisionProcessor() if VISION_PROCESSOR_AVAILABLE else None
+
+# Try to initialize vision processor, but don't crash if it fails
+vision_processor = None
+if VISION_PROCESSOR_AVAILABLE:
+    try:
+        vision_processor = VisionProcessor()
+    except Exception as e:
+        print(f"Warning: Vision processor initialization failed: {e}")
+        print("Server will continue without vision processing capabilities")
+
+# Include question router
+if QUESTIONS_AVAILABLE and db_manager:
+    set_db_manager(db_manager)
+    app.include_router(question_router)
+    logger.info("Question system router included")
 
 # In-memory storage for nodes
 nodes_storage = []

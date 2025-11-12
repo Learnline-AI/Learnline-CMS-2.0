@@ -76,6 +76,14 @@ class StudentView {
         const type = component.type;
         const params = component.parameters || {};
 
+        // Check component registry first (new system)
+        if (typeof ComponentRegistry !== 'undefined' && ComponentRegistry.has(type)) {
+            const ComponentClass = ComponentRegistry.get(type);
+            const componentInstance = new ComponentClass(null); // No CMS instance needed for student view
+            return componentInstance.renderStudent(params);
+        }
+
+        // Fallback to switch statement (old system)
         switch (type) {
             case 'heading':
                 return this.renderHeading(params);

@@ -1,5 +1,7 @@
 -- SQLite Schema for Educational CMS
 -- Simplified version for development
+--
+-- NOTE: Question system tables are defined in questions/database/question_schema.sql
 
 -- Sessions table - Track user work sessions
 CREATE TABLE IF NOT EXISTS sessions (

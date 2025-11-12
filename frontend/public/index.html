@@ -457,6 +457,22 @@
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
     <script src="animated-chat-button.js"></script>
     <script src="websocket-chat.js"></script>
+
+    <!-- CMS Utility Functions (must load before app.js) -->
+    <script src="utils/text-utils.js"></script>
+    <script src="utils/svg-generators.js"></script>
+
+    <!-- Component System (must load before app.js) -->
+    <script src="components/_base/BaseComponent.js"></script>
+    <script src="components/heading/HeadingComponent.js"></script>
+    <script src="components/paragraph/ParagraphComponent.js"></script>
+    <script src="components/memory-trick/MemoryTrickComponent.js"></script>
+    <script src="components/definition/DefinitionComponent.js"></script>
+    <script src="components/worked-example/WorkedExampleComponent.js"></script>
+    <script src="components/callout-box/CalloutBoxComponent.js"></script>
+    <script src="components/step-sequence/StepSequenceComponent.js"></script>
+    <script src="components/registry.js"></script>
+
     <script src="app.js"></script>
 </body>
 </html>

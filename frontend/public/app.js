@@ -1150,6 +1150,14 @@ class TemplateEditorCMS {
     }
 
     createComponentElement(componentType, data = null, suggestionIndex = null) {
+        // Check component registry first (new system)
+        if (typeof ComponentRegistry !== 'undefined' && ComponentRegistry.has(componentType)) {
+            const ComponentClass = ComponentRegistry.get(componentType);
+            const componentInstance = new ComponentClass(this);
+            return componentInstance.createElement(data);
+        }
+
+        // Fallback to switch statement (old system)
         const div = document.createElement('div');
         div.className = 'editor-component';
         div.dataset.componentType = componentType;
@@ -1706,13 +1714,13 @@ class TemplateEditorCMS {
         // Load CSS
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = '/questions/frontend/build/assets/index-C_Yzc4Lx.css';
+        link.href = '/questions/frontend/build/assets/index-DgNbtHZl.css';
         document.head.appendChild(link);
 
         // Load JS module
         const script = document.createElement('script');
         script.type = 'module';
-        script.src = '/questions/frontend/build/assets/index-Dc-sQLZk.js';
+        script.src = '/questions/frontend/build/assets/index-BlJCU0sk.js';
         document.body.appendChild(script);
 
         console.log('Question Builder loaded');
@@ -1899,6 +1907,15 @@ class TemplateEditorCMS {
     populateComponentInputs(componentElement, data) {
         const componentType = componentElement.dataset.componentType;
 
+        // Check component registry first (new system)
+        if (typeof ComponentRegistry !== 'undefined' && ComponentRegistry.has(componentType)) {
+            const ComponentClass = ComponentRegistry.get(componentType);
+            const componentInstance = new ComponentClass(this);
+            componentInstance.populateInputs(componentElement, data);
+            return;
+        }
+
+        // Fallback to switch statement (old system)
         switch (componentType) {
             case 'heading':
             case 'paragraph':
@@ -2454,198 +2471,6 @@ class TemplateEditorCMS {
         }
     }
 
-    // SVG Generator Functions for Hero Number
-    generatePieChartSVG(numerator, denominator) {
-        // Default values if not provided
-        const num = parseInt(numerator) || 3;
-        const denom = parseInt(denominator) || 4;
-
-        // Calculate percentage
-        const percentage = (num / denom) * 100;
-
-        // Donut/Ring chart settings
-        const radius = 80;
-        const strokeWidth = 48;
-        const circumference = 2 * Math.PI * radius;
-        const fillLength = (percentage / 100) * circumference;
-
-        return `
-            <svg width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="rgba(255, 255, 255, 0.98)" />
-                        <stop offset="100%" stop-color="rgba(255, 255, 255, 0.92)" />
-                    </linearGradient>
-                    <filter id="ringShadow">
-                        <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
-                        <feOffset dx="0" dy="2" result="offsetblur"/>
-                        <feComponentTransfer>
-                            <feFuncA type="linear" slope="0.25"/>
-                        </feComponentTransfer>
-                        <feMerge>
-                            <feMergeNode/>
-                            <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
-                    </filter>
-                    <filter id="glow">
-                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                        <feMerge>
-                            <feMergeNode in="coloredBlur"/>
-                            <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
-                    </filter>
-                </defs>
-
-                <!-- Background ring (unfilled portion) -->
-                <circle
-                    cx="150"
-                    cy="150"
-                    r="${radius}"
-                    fill="none"
-                    stroke="rgba(255, 255, 255, 0.12)"
-                    stroke-width="${strokeWidth}"
-                    stroke-linecap="round" />
-
-                <!-- Foreground ring (filled portion) -->
-                <circle
-                    cx="150"
-                    cy="150"
-                    r="${radius}"
-                    fill="none"
-                    stroke="url(#ringGrad)"
-                    stroke-width="${strokeWidth}"
-                    stroke-dasharray="${fillLength} ${circumference - fillLength}"
-                    stroke-dashoffset="${circumference * 0.25}"
-                    stroke-linecap="round"
-                    transform="rotate(-90 150 150)"
-                    filter="url(#ringShadow)" />
-
-                <!-- Fraction text -->
-                <text x="150" y="162" font-size="54" font-weight="700" fill="white" text-anchor="middle" font-family="Arial, sans-serif" style="text-shadow: 0 2px 10px rgba(0,0,0,0.3);">
-                    ${num}/${denom}
-                </text>
-            </svg>
-        `.trim();
-    }
-
-    generateBarChartSVG(current, maximum) {
-        // Default values if not provided
-        const curr = parseInt(current) || 75;
-        const max = parseInt(maximum) || 100;
-
-        // Calculate percentage
-        const percentage = Math.min((curr / max) * 100, 100);
-        const barHeight = (percentage / 100) * 140;
-
-        return `
-            <svg width="320" height="260" viewBox="0 0 320 260" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                    <linearGradient id="barGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stop-color="rgba(255, 255, 255, 0.95)" />
-                        <stop offset="100%" stop-color="rgba(255, 255, 255, 0.85)" />
-                    </linearGradient>
-                    <filter id="barShadow">
-                        <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
-                        <feOffset dx="0" dy="2" result="offsetblur"/>
-                        <feComponentTransfer>
-                            <feFuncA type="linear" slope="0.3"/>
-                        </feComponentTransfer>
-                        <feMerge>
-                            <feMergeNode/>
-                            <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
-                    </filter>
-                </defs>
-
-                <!-- Background bar -->
-                <rect x="70" y="40" width="180" height="140" fill="rgba(255, 255, 255, 0.15)" rx="14" />
-
-                <!-- Filled bar (from bottom up) -->
-                <rect
-                    x="70"
-                    y="${180 - barHeight}"
-                    width="180"
-                    height="${barHeight}"
-                    fill="url(#barGrad)"
-                    rx="14"
-                    filter="url(#barShadow)" />
-
-                <!-- Value text -->
-                <text x="160" y="215" font-size="42" font-weight="700" fill="white" text-anchor="middle" font-family="Arial, sans-serif" style="text-shadow: 0 2px 8px rgba(0,0,0,0.3);">
-                    ${curr}/${max}
-                </text>
-            </svg>
-        `.trim();
-    }
-
-    generateFractionCircleSVG(numerator, denominator) {
-        // Default values if not provided
-        const num = parseInt(numerator) || 1;
-        const denom = parseInt(denominator) || 2;
-
-        // Create circles divided into sections
-        const circleRadius = 35;
-        const spacing = 20;
-        const totalWidth = denom * (circleRadius * 2) + (denom - 1) * spacing;
-        const padding = 60;
-        const svgWidth = Math.max(totalWidth + padding, 280);
-        const svgHeight = 240;
-
-        let circles = '';
-        for (let i = 0; i < denom; i++) {
-            const startX = (svgWidth - totalWidth) / 2;
-            const cx = startX + circleRadius + i * (circleRadius * 2 + spacing);
-            const filled = i < num;
-
-            const fillId = `circleFill${i}`;
-            const gradientDef = filled ? `
-                <radialGradient id="${fillId}">
-                    <stop offset="0%" stop-color="rgba(255, 255, 255, 0.98)" />
-                    <stop offset="100%" stop-color="rgba(255, 255, 255, 0.88)" />
-                </radialGradient>
-            ` : '';
-
-            circles = gradientDef + circles;
-
-            circles += `
-                <circle
-                    cx="${cx}"
-                    cy="100"
-                    r="${circleRadius}"
-                    fill="${filled ? `url(#${fillId})` : 'rgba(255, 255, 255, 0.15)'}"
-                    stroke="rgba(255, 255, 255, ${filled ? '0.4' : '0.25'})"
-                    stroke-width="3"
-                    filter="${filled ? 'url(#circleShadow)' : 'none'}" />
-            `;
-        }
-
-        return `
-            <svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                    ${circles}
-                    <filter id="circleShadow">
-                        <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
-                        <feOffset dx="0" dy="2" result="offsetblur"/>
-                        <feComponentTransfer>
-                            <feFuncA type="linear" slope="0.3"/>
-                        </feComponentTransfer>
-                        <feMerge>
-                            <feMergeNode/>
-                            <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
-                    </filter>
-                </defs>
-
-                ${circles.split('</radialGradient>').pop()}
-
-                <!-- Fraction text -->
-                <text x="${svgWidth / 2}" y="185" font-size="44" font-weight="700" fill="white" text-anchor="middle" font-family="Arial, sans-serif" style="text-shadow: 0 2px 8px rgba(0,0,0,0.3);">
-                    ${num}/${denom}
-                </text>
-            </svg>
-        `.trim();
-    }
-
     async handleImageUpload(file, slot, component) {
         if (!file.type.startsWith('image/')) {
             alert('Please select an image file');
@@ -2739,17 +2564,25 @@ class TemplateEditorCMS {
     generatePreviewHTML(component) {
         const componentType = component.dataset.componentType;
 
+        // Check component registry first (new system)
+        if (typeof ComponentRegistry !== 'undefined' && ComponentRegistry.has(componentType)) {
+            const ComponentClass = ComponentRegistry.get(componentType);
+            const componentInstance = new ComponentClass(this);
+            return componentInstance.generatePreview(component);
+        }
+
+        // Fallback to switch statement (old system)
         // Extract component styling
         const componentStyle = this.extractComponentStyle(component);
 
         switch (componentType) {
             case 'heading':
                 const headingText = component.querySelector('.component-input').innerHTML || 'Heading';
-                return `<h2 class="preview-heading" style="${componentStyle}">${this.formatTextForPreview(headingText)}</h2>`;
+                return `<h2 class="preview-heading" style="${componentStyle}">${CMSUtils.formatTextForPreview(headingText)}</h2>`;
 
             case 'paragraph':
                 const paragraphText = component.querySelector('.component-input').innerHTML || 'Paragraph text';
-                return `<p class="preview-paragraph" style="${componentStyle}">${this.formatTextForPreview(paragraphText)}</p>`;
+                return `<p class="preview-paragraph" style="${componentStyle}">${CMSUtils.formatTextForPreview(paragraphText)}</p>`;
 
             case 'definition':
                 const inputs = component.querySelectorAll('.component-input');
@@ -2757,7 +2590,7 @@ class TemplateEditorCMS {
                 const definition = inputs[1].innerHTML || 'Definition';
                 return `
                     <div class="preview-definition" style="${componentStyle}">
-                        <strong>${this.formatTextForPreview(term)}:</strong> ${this.formatTextForPreview(definition)}
+                        <strong>${CMSUtils.formatTextForPreview(term)}:</strong> ${CMSUtils.formatTextForPreview(definition)}
                     </div>
                 `;
 
@@ -2766,7 +2599,7 @@ class TemplateEditorCMS {
                 let stepsHTML = `<ol class="preview-steps" style="${componentStyle}">`;
                 steps.forEach(step => {
                     const stepText = step.innerHTML || 'Step';
-                    stepsHTML += `<li>${this.formatTextForPreview(stepText)}</li>`;
+                    stepsHTML += `<li>${CMSUtils.formatTextForPreview(stepText)}</li>`;
                 });
                 stepsHTML += '</ol>';
                 return stepsHTML;
@@ -2778,15 +2611,15 @@ class TemplateEditorCMS {
                 const answer = exampleInputs[2].innerHTML || 'Answer';
                 return `
                     <div class="preview-example" style="${componentStyle}">
-                        <div class="example-problem"><strong>Problem:</strong> ${this.formatTextForPreview(problem)}</div>
-                        <div class="example-solution"><strong>Solution:</strong> ${this.formatTextForPreview(solution)}</div>
-                        <div class="example-answer"><strong>Answer:</strong> ${this.formatTextForPreview(answer)}</div>
+                        <div class="example-problem"><strong>Problem:</strong> ${CMSUtils.formatTextForPreview(problem)}</div>
+                        <div class="example-solution"><strong>Solution:</strong> ${CMSUtils.formatTextForPreview(solution)}</div>
+                        <div class="example-answer"><strong>Answer:</strong> ${CMSUtils.formatTextForPreview(answer)}</div>
                     </div>
                 `;
 
             case 'memory-trick':
                 const trickText = component.querySelector('.component-input').innerHTML || 'Memory trick';
-                return `<div class="preview-memory-trick" style="${componentStyle}">💡 ${this.formatTextForPreview(trickText)}</div>`;
+                return `<div class="preview-memory-trick" style="${componentStyle}">💡 ${CMSUtils.formatTextForPreview(trickText)}</div>`;
 
             case 'callout-box':
                 const calloutText = component.querySelector('.component-input')?.innerHTML || 'Callout text';
@@ -2801,7 +2634,7 @@ class TemplateEditorCMS {
                 return `
                     <div class="preview-callout-box preview-callout-${calloutStyle}" style="${componentStyle}">
                         <span class="callout-icon">${icon}</span>
-                        <div class="callout-text">${this.formatTextForPreview(calloutText)}</div>
+                        <div class="callout-text">${CMSUtils.formatTextForPreview(calloutText)}</div>
                     </div>
                 `;
 
@@ -2815,7 +2648,7 @@ class TemplateEditorCMS {
 
                 let heroVisualHTML = '';
                 if (visualType === 'text') {
-                    heroVisualHTML = `<div class="hero-number-large">${this.formatTextForPreview(visualContent)}</div>`;
+                    heroVisualHTML = `<div class="hero-number-large">${CMSUtils.formatTextForPreview(visualContent)}</div>`;
                 } else if (visualType === 'image') {
                     const imageUrl = uploadZone?.dataset.imageUrl;
                     if (imageUrl) {
@@ -2826,17 +2659,17 @@ class TemplateEditorCMS {
                 } else if (visualType === 'pie-chart') {
                     const numerator = component.querySelector('.hero-pie-numerator')?.value;
                     const denominator = component.querySelector('.hero-pie-denominator')?.value;
-                    const generatedSVG = this.generatePieChartSVG(numerator, denominator);
+                    const generatedSVG = CMSUtils.generatePieChartSVG(numerator, denominator);
                     heroVisualHTML = `<div class="hero-svg-container">${generatedSVG}</div>`;
                 } else if (visualType === 'bar-chart') {
                     const current = component.querySelector('.hero-bar-current')?.value;
                     const maximum = component.querySelector('.hero-bar-max')?.value;
-                    const generatedSVG = this.generateBarChartSVG(current, maximum);
+                    const generatedSVG = CMSUtils.generateBarChartSVG(current, maximum);
                     heroVisualHTML = `<div class="hero-svg-container">${generatedSVG}</div>`;
                 } else if (visualType === 'fraction-circle') {
                     const numerator = component.querySelector('.hero-fraction-numerator')?.value;
                     const denominator = component.querySelector('.hero-fraction-denominator')?.value;
-                    const generatedSVG = this.generateFractionCircleSVG(numerator, denominator);
+                    const generatedSVG = CMSUtils.generateFractionCircleSVG(numerator, denominator);
                     heroVisualHTML = `<div class="hero-svg-container">${generatedSVG}</div>`;
                 } else if (visualType === 'svg') {
                     const svgCode = svgTextarea?.value || '';
@@ -2850,7 +2683,7 @@ class TemplateEditorCMS {
                 return `
                     <div class="preview-hero-number preview-hero-bg-${backgroundStyle}">
                         ${heroVisualHTML}
-                        ${caption ? `<p class="hero-caption">${this.formatTextForPreview(caption)}</p>` : ''}
+                        ${caption ? `<p class="hero-caption">${CMSUtils.formatTextForPreview(caption)}</p>` : ''}
                     </div>
                 `;
 
@@ -2870,8 +2703,8 @@ class TemplateEditorCMS {
                             <div class="preview-svg-container">
                                 ${svgCode.trim() ? svgCode : '<p class="svg-placeholder">No SVG code</p>'}
                             </div>
-                            <h4 class="preview-picture-title">${this.formatTextForPreview(title)}</h4>
-                            <p class="preview-picture-body">${this.formatTextForPreview(body)}</p>
+                            <h4 class="preview-picture-title">${CMSUtils.formatTextForPreview(title)}</h4>
+                            <p class="preview-picture-body">${CMSUtils.formatTextForPreview(body)}</p>
                         </div>
                     `;
                 }
@@ -2894,8 +2727,8 @@ class TemplateEditorCMS {
                             <div class="preview-svg-container">
                                 ${svgCode.trim() ? svgCode : '<p class="svg-placeholder">No SVG code</p>'}
                             </div>
-                            <h4 class="preview-picture-title">${this.formatTextForPreview(title)}</h4>
-                            <p class="preview-picture-body">${this.formatTextForPreview(body)}</p>
+                            <h4 class="preview-picture-title">${CMSUtils.formatTextForPreview(title)}</h4>
+                            <p class="preview-picture-body">${CMSUtils.formatTextForPreview(body)}</p>
                         </div>
                     `;
                 }
@@ -2918,8 +2751,8 @@ class TemplateEditorCMS {
                             <div class="preview-svg-container">
                                 ${svgCode ? svgCode : '<p class="no-svg-placeholder">No SVG generated</p>'}
                             </div>
-                            <h4 class="preview-svg-title">${this.formatTextForPreview(title)}</h4>
-                            <p class="preview-svg-description">${this.formatTextForPreview(desc)}</p>
+                            <h4 class="preview-svg-title">${CMSUtils.formatTextForPreview(title)}</h4>
+                            <p class="preview-svg-description">${CMSUtils.formatTextForPreview(desc)}</p>
                         </div>
                     `;
                 }
@@ -2942,8 +2775,8 @@ class TemplateEditorCMS {
                             <div class="preview-svg-container">
                                 ${svgCode.trim() ? svgCode : '<p class="svg-placeholder">No SVG code</p>'}
                             </div>
-                            <h4 class="preview-picture-title">${this.formatTextForPreview(title)}</h4>
-                            <p class="preview-picture-body">${this.formatTextForPreview(body)}</p>
+                            <h4 class="preview-picture-title">${CMSUtils.formatTextForPreview(title)}</h4>
+                            <p class="preview-picture-body">${CMSUtils.formatTextForPreview(body)}</p>
                         </div>
                     `;
                 }
@@ -3169,6 +3002,16 @@ class TemplateEditorCMS {
 
     extractComponentData(component) {
         const componentType = component.dataset.componentType;
+
+        // Check component registry first (new system)
+        if (typeof ComponentRegistry !== 'undefined' && ComponentRegistry.has(componentType)) {
+            const ComponentClass = ComponentRegistry.get(componentType);
+            const componentInstance = new ComponentClass(this);
+            const extractedData = componentInstance.extractData(component);
+            return { type: componentType, ...extractedData };
+        }
+
+        // Fallback to switch statement (old system)
         const data = { type: componentType };
 
         switch (componentType) {
@@ -3212,17 +3055,17 @@ class TemplateEditorCMS {
                     const numerator = component.querySelector('.hero-pie-numerator')?.value;
                     const denominator = component.querySelector('.hero-pie-denominator')?.value;
                     data.chart_data = { numerator, denominator };
-                    data.visual_content = this.generatePieChartSVG(numerator, denominator);
+                    data.visual_content = CMSUtils.generatePieChartSVG(numerator, denominator);
                 } else if (data.visual_type === 'bar-chart') {
                     const current = component.querySelector('.hero-bar-current')?.value;
                     const maximum = component.querySelector('.hero-bar-max')?.value;
                     data.chart_data = { current, maximum };
-                    data.visual_content = this.generateBarChartSVG(current, maximum);
+                    data.visual_content = CMSUtils.generateBarChartSVG(current, maximum);
                 } else if (data.visual_type === 'fraction-circle') {
                     const numerator = component.querySelector('.hero-fraction-numerator')?.value;
                     const denominator = component.querySelector('.hero-fraction-denominator')?.value;
                     data.chart_data = { numerator, denominator };
-                    data.visual_content = this.generateFractionCircleSVG(numerator, denominator);
+                    data.visual_content = CMSUtils.generateFractionCircleSVG(numerator, denominator);
                 } else if (data.visual_type === 'svg') {
                     const svgTextarea = component.querySelector('.hero-svg-code');
                     data.visual_content = svgTextarea?.value || '';
@@ -5093,36 +4936,6 @@ class TemplateEditorCMS {
         setTimeout(() => {
             this.updateComponentPositions();
         }, 50);
-    }
-
-    // Text Formatting Methods
-    formatTextForPreview(text) {
-        if (!text) return text;
-
-        // Convert data attributes to inline styles for preview
-        let processedText = text;
-
-        // Handle data-text-color attributes by converting to inline styles
-        processedText = processedText.replace(
-            /<span data-text-color="([^"]+)"([^>]*)>(.*?)<\/span>/g,
-            (match, colorName, otherAttrs, content) => {
-                const colorMap = {
-                    'neutral': '#333333',
-                    'light-blue': '#1976D2',
-                    'soft-green': '#388E3C',
-                    'pale-yellow': '#F57F17',
-                    'light-pink': '#C2185B',
-                    'lavender': '#7B1FA2'
-                };
-                const color = colorMap[colorName] || colorMap['neutral'];
-                return `<span style="color: ${color};"${otherAttrs}>${content}</span>`;
-            }
-        );
-
-        // Convert markdown-style formatting to HTML while preserving existing styles
-        return processedText
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold: **text** -> <strong>text</strong>
-            .replace(/\*(.*?)\*/g, '<em>$1</em>');             // Italic: *text* -> <em>text</em>
     }
 
     initializeTextFormatting() {
